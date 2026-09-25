@@ -137,12 +137,11 @@ describe('objects', () => {
   });
 });
 
-describe('real level data', () => {
-  it('ignores a non-array ground field (palette colour) and uses the default ground', async () => {
-    const { LEVELS } = await import('../src/levels.js');
+describe('non-array ground', () => {
+  it('ignores a non-array ground field and uses the default ground', () => {
     view.H = 540;
-    loadTerrain(LEVELS[0]);
-    for (const o of objects()) expect(Number.isFinite(surfaceBelow(o.x, 0).y)).toBe(true);
+    loadTerrain({ ground: '#6b4a2b', objects: [{ type: 'rock', x: 900, w: 70, h: 40 }] });
+    expect(Number.isFinite(surfaceBelow(900, 0).y)).toBe(true);
     const b = { x: 0, y: 200, vx: 0, r: 18 };
     expect(collideCircle(b)).toBeNull();
     expect(b.x).toBe(0);

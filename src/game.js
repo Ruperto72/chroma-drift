@@ -1,5 +1,5 @@
 import { TOP, COLORS } from './config.js';
-import { LEVELS } from './levels.js';
+import { LEVELS } from './levels/index.js';
 import { G, view } from './state.js';
 import { lerp, rnd, wd } from './util.js';
 import { sfx } from './audio.js';

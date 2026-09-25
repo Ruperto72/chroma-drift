@@ -7,7 +7,7 @@ import { curLevel } from './game.js';
 const sx = x => mod(x - G.camX + 300, L) - 300;
 
 function drawWorld() {
-  const { ctx, W, H } = view, camX = G.camX, lv = curLevel(), s = G.sat;
+  const { ctx, W, H } = view, camX = G.camX, lv = curLevel().palette, s = G.sat;
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, tint(lv.sky[0], s)); g.addColorStop(1, tint(lv.sky[1], s));
   ctx.fillStyle = g; ctx.fillRect(-30, -30, W + 60, H + 60);
