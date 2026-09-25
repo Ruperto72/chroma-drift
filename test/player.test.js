@@ -113,4 +113,16 @@ describe('updatePlayer with objects', () => {
     updatePlayer(1 / 60);
     expect(G.P.vx).toBeCloseTo(160 / 60, 6);
   });
+  it('stops at a cave ceiling', () => {
+    setup([], { x: 600, y: 262, vy: -600 }, { width: 1200, ground: Array(13).fill(100), ceiling: Array(13).fill(300) });
+    updatePlayer(1 / 60);
+    expect(G.P.y).toBe(540 - 300 + 18);
+    expect(G.P.vy).toBe(0);
+  });
+  it('bounces off the far cave wall', () => {
+    setup([], { x: 1195, y: 300, vx: 300, spin: 1 }, { width: 1200, ground: Array(13).fill(100), ceiling: Array(13).fill(300) });
+    updatePlayer(1 / 60);
+    expect(G.P.x).toBe(1200 - 18);
+    expect(G.P.vx).toBeLessThan(0);
+  });
 });

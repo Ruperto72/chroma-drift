@@ -6,5 +6,6 @@ export const G = {
   P: null, spark: null, own: null,
   enemies: [], bullets: [], ebullets: [], drops: [], gems: [], parts: [], texts: [], embers: [], emberT: 0,
   camX: 0, shake: 0, paused: false, best: 0,
+  scene: 'surface', cave: null, surfaceSnapshot: null, cavesUsed: new Set(), lifeTaken: false, loot: [],
 };
 try { G.best = +localStorage.getItem('chromaDriftBest') || 0; } catch (e) {}

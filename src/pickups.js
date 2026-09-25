@@ -1,5 +1,5 @@
 import { COLORS, SLOTS } from './config.js';
-import { G } from './state.js';
+import { G, view } from './state.js';
 import { rnd, wd } from './util.js';
 import { surfaceBelow } from './terrain.js';
 import { sfx } from './audio.js';
@@ -21,6 +21,11 @@ export function activate() {
   burst(P.x, P.y, '#ffcf4a', 18, 160);
 }
 
+export function collectGem(g) {
+  G.sel = (G.sel + 1) % SLOTS.length; G.score += 40; sfx('gem');
+  addText(g.x, g.y - 10, SLOTS[G.sel].label, '#b8ffea');
+}
+
 function updatePickups(list, dt, onCollect) {
   const P = G.P, spark = G.spark;
   for (const d of list) {
@@ -29,6 +34,7 @@ function updatePickups(list, dt, onCollect) {
     const prevY = d.y;
     d.x += d.vx * dt; d.y += d.vy * dt;
     const s = surfaceBelow(d.x, prevY + 9); if (s && d.y > s.y - 9) { d.y = s.y - 9; d.vy = 0; d.vx = 0; }
+    if (d.y > view.H + 40) { d.gone = true; continue; }
     if (G.own.sat) {
       const dx = wd(spark.x - d.x), dy = spark.y - d.y, m = Math.hypot(dx, dy);
       if (m < 130 && m > 1) { d.x += dx / m * 280 * dt; d.y += dy / m * 280 * dt; d.vy = 0; }
@@ -49,8 +55,5 @@ export function updateAllPickups(dt) {
       if (G.state === 'play' && G.got.every((g, i) => g >= G.need[i])) levelClear();
     }
   });
-  G.gems = updatePickups(G.gems, dt, g => {
-    G.sel = (G.sel + 1) % SLOTS.length; G.score += 40; sfx('gem');
-    addText(g.x, g.y - 10, SLOTS[G.sel].label, '#b8ffea');
-  });
+  G.gems = updatePickups(G.gems, dt, collectGem);
 }

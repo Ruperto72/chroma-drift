@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { G, view } from '../src/state.js';
-import { loadTerrain, groundAt } from '../src/terrain.js';
+import { loadTerrain, groundAt, ceilingAt } from '../src/terrain.js';
 import { loadZones } from '../src/zones.js';
 import { loadRules } from '../src/rules.js';
 import { updatePlayer } from '../src/player.js';
@@ -51,5 +51,25 @@ describe('playability in spin mode', () => {
   ])('%s can be passed without Thrust', (_, lv, from, to) => {
     expect(cross(lv, from, to, 60).passed).toBeGreaterThanOrEqual(16);
     expect(cross(lv, from, to, 30).passed).toBeGreaterThanOrEqual(6);
+  });
+});
+
+function crossCave(c, fps) {
+  view.H = 540; loadTerrain({ width: c.width, ground: c.floor, ceiling: c.ceiling, objects: c.objects || [] }); loadZones({}); loadRules({});
+  Object.assign(G, { state: 'play', scene: 'cave', dead: 0, shield: 0, lives: 3, t: 0, parts: [], own: { thrust: false, anti: false, rapid: false, double: false, sat: false } });
+  G.P = { x: 80, y: ceilingAt(80) + 40, vx: 60, vy: 0, r: 18, spin: 1, ang: 0, face: 1, inv: 0 };
+  keys.ArrowRight = true;
+  for (let i = 0; i < 30 * fps; i++) {
+    updatePlayer(1 / fps);
+    if (G.dead > 0) return 'dead';
+    if (G.P.x > c.width - 60) return 'passed';
+  }
+  return 'stuck';
+}
+
+describe('caves in spin mode', () => {
+  it.each(LEVELS.flatMap(lv => lv.caves.map(c => [c.id, c])))('cave %s can be crossed in spin mode', (_, c) => {
+    expect(crossCave(c, 60)).toBe('passed');
+    expect(crossCave(c, 30)).toBe('passed');
   });
 });

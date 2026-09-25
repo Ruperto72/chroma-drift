@@ -1,7 +1,8 @@
 import { TOP } from './config.js';
 import { G } from './state.js';
 import { clamp, lerp, rnd } from './util.js';
-import { surfaceBelow, collideCircle, touchesHazard, hazardBelow } from './terrain.js';
+import { surfaceBelow, collideCircle, touchesHazard, hazardBelow, ceilingAt, caveWidth } from './terrain.js';
+import { tryCliff } from './caves.js';
 import { sfx } from './audio.js';
 import { burst } from './fx.js';
 import { inX, inY } from './input.js';
@@ -48,7 +49,8 @@ export function updatePlayer(dt) {
   P.vx += windForce() * dt;
   const prevBottom = P.y + P.r;
   P.x += P.vx * dt; P.y += P.vy * dt;
-  collideCircle(P, prevBottom);
+  const hit = collideCircle(P, prevBottom);
+  if (hit?.type === 'cliff') { tryCliff(hit); if (G.scene === 'cave') return; }
   const s = surfaceBelow(P.x, prevBottom);
   if (s && P.y + P.r > s.y) {
     P.y = s.y - P.r;
@@ -62,7 +64,13 @@ export function updatePlayer(dt) {
     }
   }
   if (G.shield <= 0 && (touchesHazard(P) || inLava(P))) die();
-  if (P.y - P.r < TOP) { P.y = TOP + P.r; if (P.vy < 0) P.vy = 0; }
+  const ceil = ceilingAt(P.x);
+  if (P.y - P.r < ceil) { P.y = ceil + P.r; if (P.vy < 0) P.vy = 0; }
+  const cw = caveWidth();
+  if (cw != null) {
+    if (P.x < P.r) { P.x = P.r; P.vx = Math.abs(P.vx) * .6; }
+    else if (P.x > cw - P.r) { P.x = cw - P.r; P.vx = -Math.abs(P.vx) * .6; }
+  }
   P.ang += P.vx * dt / P.r;
   if (P.inv > 0) P.inv -= dt;
 }

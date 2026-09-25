@@ -3,14 +3,15 @@ import { LEVELS } from './levels/index.js';
 import { loadZones } from './zones.js';
 import { loadRules, updateEmbers } from './rules.js';
 import { G, view } from './state.js';
-import { lerp, rnd, wd } from './util.js';
+import { lerp, rnd, wd, clamp } from './util.js';
 import { sfx } from './audio.js';
 import { banner, burst, addText } from './fx.js';
 import { firing } from './input.js';
 import { updatePlayer, die, shoot } from './player.js';
 import { spawnWave, killEnemy, updateEnemies } from './enemies.js';
 import { updateAllPickups, pickup } from './pickups.js';
-import { loadTerrain, hitObjectWithBullet, damageObject, objBox, updateObjects } from './terrain.js';
+import { loadTerrain, hitObjectWithBullet, damageObject, objBox, updateObjects, caveWidth } from './terrain.js';
+import { surfaceLevel, breakEntrance, updateCaves } from './caves.js';
 
 export function curLevel() { return LEVELS[G.level % LEVELS.length]; }
 
@@ -26,7 +27,8 @@ export function startLevel() {
   const extra = Math.floor(G.level / LEVELS.length) * 2;
   G.need = curLevel().need.map(n => n + extra);
   G.got = [0, 0, 0]; G.sat = 0; G.spawnT = 1.8; G.clearT = 0;
-  loadTerrain(curLevel());
+  Object.assign(G, { scene: 'surface', cave: null, surfaceSnapshot: null, cavesUsed: new Set(), lifeTaken: false, loot: [] });
+  loadTerrain(G.state === 'menu' ? curLevel() : surfaceLevel(curLevel()));
   loadZones(curLevel());
   loadRules(curLevel());
   G.P = { x: 0, y: TOP + 120, vx: 0, vy: 0, r: 18, spin: G.state === 'menu' ? .45 : 0, ang: 0, face: 1, inv: 2 };
@@ -86,7 +88,7 @@ export function update(dt) {
 
     if (G.state === 'play') {
       G.spawnT -= dt;
-      if (G.spawnT <= 0 && G.enemies.length < 7 + G.level * 2) { spawnWave(); G.spawnT = Math.max(1.1, 2.4 + rnd(0, 1.5) - G.level * .25); }
+      if (G.spawnT <= 0 && G.scene === 'surface' && G.enemies.length < 7 + G.level * 2) { spawnWave(); G.spawnT = Math.max(1.1, 2.4 + rnd(0, 1.5) - G.level * .25); }
       const prog = (G.got[0] + G.got[1] + G.got[2]) / (G.need[0] + G.need[1] + G.need[2]);
       G.sat = lerp(G.sat, .06 + prog * .4, Math.min(1, 2 * dt));
     } else {
@@ -105,10 +107,13 @@ export function update(dt) {
         b.life = 0;
         if (o.hp) {
           if (damageObject(o)) {
-            const top = objBox(o).top;
-            G.drops.push(pickup(o.x - 6, top, { c: o.c }), pickup(o.x + 6, top, { c: o.c }));
-            burst(o.x, top + o.h / 2, COLORS[o.c], 20); sfx('pop');
-            G.score += 30; addText(o.x, top, '+30');
+            if (o.cave) breakEntrance(o);
+            else {
+              const top = objBox(o).top;
+              G.drops.push(pickup(o.x - 6, top, { c: o.c }), pickup(o.x + 6, top, { c: o.c }));
+              burst(o.x, top + o.h / 2, COLORS[o.c], 20); sfx('pop');
+              G.score += 30; addText(o.x, top, '+30');
+            }
           } else { burst(b.x, b.y, '#ffffff', 4, 120); sfx('clink'); }
         }
         continue;
@@ -150,9 +155,10 @@ export function update(dt) {
     G.ebullets = G.ebullets.filter(b => b.life > 0 && b.y < view.H && b.y > 0);
     G.embers = G.embers.filter(m => !m.dead);
     const cx = G.camX + view.W / 2;
-    G.enemies = G.enemies.filter(e => !e.dead && !(e.age > 4 && Math.abs(wd(e.x - cx)) > view.W / 2 + 520));
+    G.enemies = G.enemies.filter(e => !e.dead && e.y < view.H + 60 && (e.keep || !(e.age > 4 && Math.abs(wd(e.x - cx)) > view.W / 2 + 520)));
 
     updateAllPickups(dt);
+    updateCaves();
   }
 
   // particles / texts / camera
@@ -162,5 +168,7 @@ export function update(dt) {
   G.texts = G.texts.filter(t => t.t < 1);
   const tx = G.P.x - view.W / 2 + G.P.face * view.W * .12;
   G.camX += (tx - G.camX) * Math.min(1, 3 * dt);
+  const cw = caveWidth();
+  if (cw != null) G.camX = cw > view.W ? clamp(G.camX, 0, cw - view.W) : (cw - view.W) / 2;
   if (G.shake > 0) G.shake = Math.max(0, G.shake - 30 * dt);
 }
