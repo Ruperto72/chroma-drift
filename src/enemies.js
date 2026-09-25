@@ -1,7 +1,7 @@
 import { TOP, COLORS } from './config.js';
 import { G, view } from './state.js';
 import { rnd, wd } from './util.js';
-import { groundAt } from './terrain.js';
+import { groundAt, surfaceBelow, collideCircle } from './terrain.js';
 import { sfx } from './audio.js';
 import { addText, burst } from './fx.js';
 import { pickup } from './pickups.js';
@@ -18,7 +18,7 @@ export function spawnWave() {
   for (let i = 0; i < n; i++) {
     const x = G.camX + (side > 0 ? W + 50 + i * 48 : -50 - i * 48);
     const e = { type, x, y: baseY, baseY, vx: -side * sp, vy: 0, t: i * .45, age: 0, r: 14, hp: 1, color, phase: 0, flash: 0, dead: false };
-    if (type === 'hop') { e.r = 13; e.y = groundAt(x) - e.r; e.vy = -rnd(300, 600); }
+    if (type === 'hop') { e.r = 13; e.y = (groundAt(x) ?? view.H) - e.r; e.vy = -rnd(300, 600); }
     if (type === 'dive') { e.baseY = rnd(TOP + 30, TOP + 120); e.y = e.baseY; }
     G.enemies.push(e);
   }
@@ -45,8 +45,10 @@ export function updateEnemies(dt) {
     if (e.type === 'float') { e.x += e.vx * dt; e.y = e.baseY + Math.sin(e.t * 2.6) * 38; }
     else if (e.type === 'carrier') { e.x += e.vx * dt; e.y = e.baseY + Math.sin(e.t * 1.5) * 20; }
     else if (e.type === 'hop') {
+      const prevBottom = e.y + e.r;
       e.vy += 1100 * dt; e.x += e.vx * dt; e.y += e.vy * dt;
-      const gy = groundAt(e.x); if (e.y + e.r > gy) { e.y = gy - e.r; e.vy = -rnd(420, 620); }
+      collideCircle(e);
+      const s = surfaceBelow(e.x, prevBottom); if (s && e.y + e.r > s.y) { e.y = s.y - e.r; e.vy = -rnd(420, 620); }
     } else if (e.type === 'dive') {
       if (e.phase === 0) {
         e.x += e.vx * dt; e.y = e.baseY + Math.sin(e.t * 4) * 10;
@@ -56,7 +58,7 @@ export function updateEnemies(dt) {
         }
       } else {
         e.x += e.vx * dt; e.y += e.vy * dt;
-        const gy = groundAt(e.x); if (e.y > gy - e.r) { e.y = gy - e.r; e.vy = -Math.abs(e.vy) * .8; }
+        const gy = groundAt(e.x) ?? Infinity; if (e.y > gy - e.r) { e.y = gy - e.r; e.vy = -Math.abs(e.vy) * .8; }
         if (e.y < TOP) { e.y = TOP; e.vy = Math.abs(e.vy); }
       }
     }

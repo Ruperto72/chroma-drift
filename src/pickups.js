@@ -1,7 +1,7 @@
 import { COLORS, SLOTS } from './config.js';
 import { G } from './state.js';
 import { rnd, wd } from './util.js';
-import { groundAt } from './terrain.js';
+import { surfaceBelow } from './terrain.js';
 import { sfx } from './audio.js';
 import { addText, banner, burst } from './fx.js';
 import { levelClear } from './game.js';
@@ -24,8 +24,9 @@ function updatePickups(list, dt, onCollect) {
   const P = G.P, spark = G.spark;
   for (const d of list) {
     d.t += dt; d.vy = Math.min(d.vy + 220 * dt, 80); d.vx *= .98;
+    const prevY = d.y;
     d.x += d.vx * dt; d.y += d.vy * dt;
-    const gy = groundAt(d.x) - 9; if (d.y > gy) { d.y = gy; d.vy = 0; d.vx = 0; }
+    const s = surfaceBelow(d.x, prevY + 9); if (s && d.y > s.y - 9) { d.y = s.y - 9; d.vy = 0; d.vx = 0; }
     if (G.own.sat) {
       const dx = wd(spark.x - d.x), dy = spark.y - d.y, m = Math.hypot(dx, dy);
       if (m < 130 && m > 1) { d.x += dx / m * 280 * dt; d.y += dy / m * 280 * dt; d.vy = 0; }

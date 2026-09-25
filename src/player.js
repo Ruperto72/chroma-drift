@@ -1,7 +1,7 @@
 import { TOP } from './config.js';
 import { G } from './state.js';
 import { clamp, lerp, rnd } from './util.js';
-import { groundAt } from './terrain.js';
+import { surfaceBelow, collideCircle, touchesHazard, hazardBelow } from './terrain.js';
 import { sfx } from './audio.js';
 import { burst } from './fx.js';
 import { inX, inY } from './input.js';
@@ -23,6 +23,7 @@ export function updatePlayer(dt) {
     if (G.dead <= 0) {
       if (G.lives < 0) { gameOver(); return; }
       Object.assign(P, { y: TOP + 90, vx: 0, vy: 0, spin: 0, inv: 2.5 });
+      for (let i = 0; i < 100 && hazardBelow(P.x, P.r); i++) P.x += 20;
     }
     return;
   }
@@ -40,17 +41,21 @@ export function updatePlayer(dt) {
       if (!ix && Math.abs(P.vx) > 20) P.face = Math.sign(P.vx);
     }
   }
+  const prevBottom = P.y + P.r;
   P.x += P.vx * dt; P.y += P.vy * dt;
-  const gy = groundAt(P.x);
-  if (P.y + P.r > gy) {
-    P.y = gy - P.r;
+  collideCircle(P);
+  const s = surfaceBelow(P.x, prevBottom);
+  if (s && P.y + P.r > s.y) {
+    P.y = s.y - P.r;
     if (own.anti) P.vy = Math.min(0, P.vy);
     else {
       let b = 640; if (own.thrust) { if (iy < 0) b = 860; else if (iy > 0) b = 380; }
-      P.vy = -b; sfx('bounce');
-      for (let i = 0; i < 5; i++) G.parts.push({ x: P.x + rnd(-10, 10), y: gy, vx: rnd(-60, 60), vy: rnd(-80, -20), life: .4, max: .4, col: 'rgba(220,220,220,.7)', sz: rnd(1.5, 3) });
+      if (s.kind === 'mushroom') { b *= s.obj.bounce; s.obj.squash = 1; sfx('boing'); } else sfx('bounce');
+      P.vy = -b;
+      for (let i = 0; i < 5; i++) G.parts.push({ x: P.x + rnd(-10, 10), y: s.y, vx: rnd(-60, 60), vy: rnd(-80, -20), life: .4, max: .4, col: 'rgba(220,220,220,.7)', sz: rnd(1.5, 3) });
     }
   }
+  if (G.shield <= 0 && touchesHazard(P)) die();
   if (P.y - P.r < TOP) { P.y = TOP + P.r; if (P.vy < 0) P.vy = 0; }
   P.ang += P.vx * dt / P.r;
   if (P.inv > 0) P.inv -= dt;

@@ -3,6 +3,7 @@ const SFX = {
   shot: [900, 420, .06, 'square', .025], bounce: [150, 80, .08, 'sine', .05], pop: [320, 60, .18, 'sawtooth', .06],
   drop: [660, 1320, .12, 'triangle', .08], gem: [990, 1980, .16, 'sine', .08], power: [440, 1760, .35, 'square', .05],
   deny: [200, 140, .16, 'square', .05], die: [420, 40, .7, 'sawtooth', .1], clear: [523, 1046, .5, 'triangle', .1],
+  boing: [220, 660, .18, 'sine', .07], clink: [1400, 900, .08, 'triangle', .05],
 };
 
 export function initAudio() {

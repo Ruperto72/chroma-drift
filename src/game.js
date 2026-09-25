@@ -3,12 +3,12 @@ import { LEVELS } from './levels.js';
 import { G, view } from './state.js';
 import { lerp, rnd, wd } from './util.js';
 import { sfx } from './audio.js';
-import { banner, burst } from './fx.js';
+import { banner, burst, addText } from './fx.js';
 import { firing } from './input.js';
 import { updatePlayer, die, shoot } from './player.js';
 import { spawnWave, killEnemy, updateEnemies } from './enemies.js';
-import { updateAllPickups } from './pickups.js';
-import { loadTerrain } from './terrain.js';
+import { updateAllPickups, pickup } from './pickups.js';
+import { loadTerrain, hitObjectWithBullet, damageObject, objBox, updateObjects } from './terrain.js';
 
 export function curLevel() { return LEVELS[G.level % LEVELS.length]; }
 
@@ -89,11 +89,25 @@ export function update(dt) {
       G.clearT += dt; G.sat = Math.min(1, G.sat + dt * .45);
     }
 
+    updateObjects(dt);
     updateEnemies(dt);
 
     // bullets
     for (const b of G.bullets) {
       b.x += b.vx * dt; b.life -= dt;
+      const o = hitObjectWithBullet(b);
+      if (o) {
+        b.life = 0;
+        if (o.hp) {
+          if (damageObject(o)) {
+            const top = objBox(o).top;
+            G.drops.push(pickup(o.x - 6, top, { c: o.c }), pickup(o.x + 6, top, { c: o.c }));
+            burst(o.x, top + o.h / 2, COLORS[o.c], 20); sfx('pop');
+            G.score += 30; addText(o.x, top, '+30');
+          } else { burst(b.x, b.y, '#ffffff', 4, 120); sfx('clink'); }
+        }
+        continue;
+      }
       for (const e of G.enemies) {
         if (e.dead) continue;
         if (Math.abs(wd(b.x - e.x)) < e.r + 7 && Math.abs(b.y - e.y) < e.r + 7) {
