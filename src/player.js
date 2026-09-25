@@ -43,7 +43,7 @@ export function updatePlayer(dt) {
   }
   const prevBottom = P.y + P.r;
   P.x += P.vx * dt; P.y += P.vy * dt;
-  collideCircle(P);
+  collideCircle(P, prevBottom);
   const s = surfaceBelow(P.x, prevBottom);
   if (s && P.y + P.r > s.y) {
     P.y = s.y - P.r;

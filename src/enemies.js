@@ -47,7 +47,7 @@ export function updateEnemies(dt) {
     else if (e.type === 'hop') {
       const prevBottom = e.y + e.r;
       e.vy += 1100 * dt; e.x += e.vx * dt; e.y += e.vy * dt;
-      collideCircle(e);
+      collideCircle(e, prevBottom);
       const s = surfaceBelow(e.x, prevBottom); if (s && e.y + e.r > s.y) { e.y = s.y - e.r; e.vy = -rnd(420, 620); }
     } else if (e.type === 'dive') {
       if (e.phase === 0) {

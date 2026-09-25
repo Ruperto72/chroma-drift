@@ -57,4 +57,16 @@ describe('updatePlayer with objects', () => {
     updatePlayer(1 / 60);
     expect(Math.abs(G.P.x - 1000)).toBeGreaterThanOrEqual(35 + 18);
   });
+  it("lands on a rock when falling fast at 30 fps", () => {
+    setup([{ type: "rock", x: 1000, w: 70, h: 40 }], { x: 1000, y: 380, vy: 900 });
+    updatePlayer(1 / 30);
+    expect(G.P.x).toBeCloseTo(1000, 6);
+    expect(G.P.y).toBeCloseTo(382, 6);
+    expect(G.P.vy).toBe(-640);
+  });
+  it("gets the mushroom boost when falling fast at 30 fps", () => {
+    setup([{ type: "mushroom", x: 1000 }], { x: 1000, y: 392, vy: 900 });
+    updatePlayer(1 / 30);
+    expect(G.P.vy).toBeCloseTo(-1024, 6);
+  });
 });

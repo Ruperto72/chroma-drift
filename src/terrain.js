@@ -58,11 +58,12 @@ export function surfaceBelow(x, y) {
   return g == null ? null : { y: g, kind: 'ground', obj: null };
 }
 
-export function collideCircle(b) {
+export function collideCircle(b, prevBottom = Infinity) {
   let hit = null;
   for (const o of objs) {
     if (o.gone || !o.solid) continue;
     const box = objBox(o), dx = wd(b.x - o.x), hw = o.w / 2;
+    if (box.top >= prevBottom - 1) continue; // was above the top last frame: landing handles it
     const ex = dx - Math.max(-hw, Math.min(hw, dx)), ey = b.y - Math.max(box.top, Math.min(box.bottom, b.y));
     if (ex * ex + ey * ey >= b.r * b.r) continue;
     if (ey < 0 && -ey >= Math.abs(ex)) continue; // contact from above: landing handles it

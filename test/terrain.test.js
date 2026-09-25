@@ -92,6 +92,11 @@ describe('objects', () => {
     expect(b.x).toBeCloseTo(3000 + 14 + 18, 6);
     expect(b.vx).toBeCloseTo(180, 6);
   });
+  it("skips objects the body was above last frame (landing handles them)", () => {
+    const b = { x: 1000, y: 410, vx: 0, r: 18 };
+    expect(collideCircle(b, 395)).toBeNull();
+    expect(b.x).toBe(1000);
+  });
   it('leaves a body resting on a rock top alone', () => {
     const b = { x: 1000, y: 382, vx: 50, r: 18 };
     expect(collideCircle(b)).toBeNull();
