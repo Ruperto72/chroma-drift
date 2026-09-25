@@ -2,13 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { G, view } from '../src/state.js';
 import { loadTerrain } from '../src/terrain.js';
 import { updatePlayer } from '../src/player.js';
+import { loadZones } from '../src/zones.js';
 
 const flat = Array(48).fill(100); // ground y 440
 
-function setup(objects, P) {
+function setup(objects, P, extra = {}) {
   view.H = 540;
-  loadTerrain({ ground: flat, objects });
-  Object.assign(G, { state: 'play', dead: 0, shield: 0, lives: 3, parts: [], own: { thrust: false, anti: false, rapid: false, double: false, sat: false } });
+  const level = { ground: flat, objects, ...extra };
+  loadTerrain(level); loadZones(level);
+  Object.assign(G, { state: 'play', dead: 0, shield: 0, lives: 3, t: 0, parts: [], own: { thrust: false, anti: false, rapid: false, double: false, sat: false } });
   G.P = { x: 0, y: 0, vx: 0, vy: 0, r: 18, spin: 0, ang: 0, face: 1, inv: 0, ...P };
 }
 
@@ -68,5 +70,40 @@ describe('updatePlayer with objects', () => {
     setup([{ type: "mushroom", x: 1000 }], { x: 1000, y: 392, vy: 900 });
     updatePlayer(1 / 30);
     expect(G.P.vy).toBeCloseTo(-1024, 6);
+  });
+  it('steers four times slower on ice', () => {
+    setup([], { x: 2000, y: 200, spin: 1 }, { zones: [{ type: 'ice', x: 1000, w: 400 }] });
+    updatePlayer(1 / 60);
+    const offIce = G.P.vx;
+    setup([], { x: 1000, y: 200, spin: 1 }, { zones: [{ type: 'ice', x: 1000, w: 400 }] });
+    updatePlayer(1 / 60);
+    expect(G.P.vx).toBeCloseTo(offIce * .25, 6);
+  });
+  it('sinks slowly in water', () => {
+    setup([], { x: 1000, y: 420, vy: 0 }, { zones: [{ type: 'water', x: 1000, w: 400 }] });
+    updatePlayer(1 / 60);
+    expect(G.P.vy).toBeCloseTo(6.25 * (1 - 2.5 / 60), 6);
+  });
+  it('bounces at 0.4x from the bottom of a pool', () => {
+    setup([], { x: 1000, y: 420, vy: 300 }, { zones: [{ type: 'water', x: 1000, w: 400 }] });
+    updatePlayer(1 / 60);
+    expect(G.P.vy).toBeCloseTo(-256, 6);
+  });
+  it('escapes a water pool without thrust', () => {
+    setup([], { x: 1000, y: 420, vy: 0 }, { zones: [{ type: 'water', x: 1000, w: 400 }] });
+    let minY = Infinity;
+    for (let i = 0; i < 600; i++) { updatePlayer(1 / 60); minY = Math.min(minY, G.P.y); }
+    expect(minY).toBeLessThan(410);
+  });
+  it('loses a life in lava', () => {
+    setup([], { x: 1000, y: 421, vy: 100 }, { zones: [{ type: 'lava', x: 1000, w: 160 }] });
+    updatePlayer(1 / 60);
+    expect(G.lives).toBe(2);
+  });
+  it('respawns clear of lava', () => {
+    setup([], { x: 1000, y: 200 }, { zones: [{ type: 'lava', x: 1000, w: 160 }] });
+    Object.assign(G, { dead: .01, lives: 2 });
+    updatePlayer(1 / 60);
+    expect(Math.abs(G.P.x - 1000)).toBeGreaterThanOrEqual(80 + 18);
   });
 });
