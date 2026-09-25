@@ -153,12 +153,12 @@ En JSON-fil per värld i `src/levels/`: `meadows.json`, `dusk-valley.json`, `fro
 | Zon | Effekt |
 |---|---|
 | `ice` | Horisontell lerp-faktor för styrning/snurr ×0,25; ingen dämpning av vx vid studs. |
-| `water` | Ritas som vattenyta i höjd med marken + 30. Inne i vattnet: gravitation ×0,25, vy dämpas, studs mot botten ×0,4. ↑ eller Antigrav tar en upp. |
+| `water` | Vattenyta på `heightAt(zone.x) + 30` (plan yta). Under ytan: gravitation ×0,25, vy × (1 − 2,5·dt), ↑ ger −1200·dt, studs ×0,4. |
 | `lava` | Kontakt = `die()` (som `thorns`). Ritas glödande och pulserande. |
 
 ### Regler (hela världen)
 
-- `wind: { strength, period }` – sinusformad sidokraft på spelare och droppar. HUD visar en liten pil med riktning och styrka.
+- `wind: { strength, period }` – acceleration `strength · sin(2π·t/period)` i sidled på spelaren (alla lägen) och luftburna droppar (×0,5). HUD visar en pil under kraftfältet.
 - `embers: { rate }` – glödkorn faller från `TOP` på slumpade x nära kameran; kontakt = `die()`, kan skjutas bort.
 
 ### Dekor

@@ -3,8 +3,54 @@ import { G, view } from './state.js';
 import { mod, clamp, rnd, tint, hash, rrect } from './util.js';
 import { groundAt, surfaceBelow, objects, objBox } from './terrain.js';
 import { curLevel } from './game.js';
+import { allZones, waterSurface } from './zones.js';
 
 const sx = x => mod(x - G.camX + 300, L) - 300;
+
+function drawDecor(kind, wx, x, gy, h, s, pal) {
+  const { ctx } = view;
+  if (kind === 'meadow') {
+    if (h > .62) {
+      const th = 30 + h * 30;
+      ctx.fillStyle = tint('#5a3b22', s); ctx.fillRect(x - 3, gy - th, 6, th + 4);
+      ctx.fillStyle = tint(pal.grass, s * .9); ctx.beginPath(); ctx.arc(x, gy - th, 16 + h * 8, 0, TAU); ctx.fill();
+      ctx.fillStyle = tint(pal.deco, s); ctx.beginPath(); ctx.arc(x + 6, gy - th - 4, 3.5, 0, TAU); ctx.arc(x - 7, gy - th + 5, 3, 0, TAU); ctx.fill();
+    } else if (h > .3) {
+      for (let i = 0; i < 3; i++) {
+        const fx = x + (i - 1) * 12, fy = groundAt(wx + (i - 1) * 12);
+        if (fy == null) continue;
+        ctx.strokeStyle = tint(pal.grass, s); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - 14 - i * 3); ctx.stroke();
+        ctx.fillStyle = tint(pal.deco, s); ctx.beginPath(); ctx.arc(fx, fy - 15 - i * 3, 4, 0, TAU); ctx.fill();
+      }
+    }
+  } else if (kind === 'dusk') {
+    if (h > .6) {
+      const th = 36 + h * 30;
+      ctx.strokeStyle = tint('#2a1a24', s); ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath();
+      ctx.moveTo(x, gy + 2); ctx.lineTo(x, gy - th);
+      ctx.moveTo(x, gy - th * .6); ctx.lineTo(x - 14, gy - th * .85);
+      ctx.moveTo(x, gy - th * .75); ctx.lineTo(x + 12, gy - th - 6); ctx.stroke(); ctx.lineCap = 'butt';
+    } else if (h > .35) {
+      ctx.fillStyle = tint('#3b2440', s); ctx.fillRect(x - 2, gy - 34, 4, 36);
+      ctx.fillStyle = tint(pal.deco, s, .25); ctx.beginPath(); ctx.arc(x, gy - 38, 12, 0, TAU); ctx.fill();
+      ctx.fillStyle = tint(pal.deco, s); ctx.beginPath(); ctx.arc(x, gy - 38, 5, 0, TAU); ctx.fill();
+    }
+  } else if (kind === 'icicles') {
+    if (h > .55) {
+      ctx.fillStyle = tint('#f4fbff', s); ctx.beginPath(); ctx.ellipse(x, gy + 2, 26 + h * 14, 10 + h * 6, 0, Math.PI, 0); ctx.fill();
+    } else if (h > .3) {
+      ctx.fillStyle = tint('#bfe9ff', s, .9); ctx.beginPath();
+      for (let i = -1; i <= 1; i++) { const bx = x + i * 8, sh = 14 + (1 - Math.abs(i)) * 12 + h * 10; ctx.moveTo(bx - 4, gy + 2); ctx.lineTo(bx, gy - sh); ctx.lineTo(bx + 4, gy + 2); }
+      ctx.fill();
+    }
+  } else if (kind === 'embers') {
+    if (h > .5) {
+      const th = 24 + h * 34;
+      ctx.fillStyle = tint('#1a0d0a', s); ctx.fillRect(x - 5, gy - th, 10, th + 4);
+      ctx.fillStyle = `rgba(255,${(120 + Math.sin(G.t * 4 + h * 9) * 40) | 0},40,.9)`; ctx.beginPath(); ctx.arc(x, gy - th, 3.5, 0, TAU); ctx.fill();
+    }
+  }
+}
 
 function drawWorld() {
   const { ctx, W, H } = view, camX = G.camX, lv = curLevel().palette, s = G.sat;
@@ -22,24 +68,12 @@ function drawWorld() {
   ctx.fillStyle = tint(lv.near, s); ctx.beginPath(); ctx.moveTo(-30, H);
   for (let x = -30; x <= W + 38; x += 8) { const w = camX * .5 + x; ctx.lineTo(x, H - 150 - 30 * Math.sin(w * .006 + 1) - 14 * Math.sin(w * .017)); }
   ctx.lineTo(W + 38, H); ctx.fill();
-  // deco (trees & flowers) sitting on ground
+  // deco sitting on ground
+  const decor = curLevel().decor;
   const step = 200, k0 = Math.floor((camX - 60) / step), k1 = Math.floor((camX + W + 60) / step);
   for (let k = k0; k <= k1; k++) {
-    const wx = k * step, h = hash(mod(k, L / step)), x = wx - camX, gy = groundAt(wx);
-    if (gy == null) continue;
-    if (h > .62) {
-      const th = 30 + h * 30;
-      ctx.fillStyle = tint('#5a3b22', s); ctx.fillRect(x - 3, gy - th, 6, th + 4);
-      ctx.fillStyle = tint(lv.grass, s * .9); ctx.beginPath(); ctx.arc(x, gy - th, 16 + h * 8, 0, TAU); ctx.fill();
-      ctx.fillStyle = tint(lv.deco, s); ctx.beginPath(); ctx.arc(x + 6, gy - th - 4, 3.5, 0, TAU); ctx.arc(x - 7, gy - th + 5, 3, 0, TAU); ctx.fill();
-    } else if (h > .3) {
-      for (let i = 0; i < 3; i++) {
-        const fx = x + (i - 1) * 12, fy = groundAt(wx + (i - 1) * 12);
-        if (fy == null) continue;
-        ctx.strokeStyle = tint(lv.grass, s); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - 14 - i * 3); ctx.stroke();
-        ctx.fillStyle = tint(lv.deco, s); ctx.beginPath(); ctx.arc(fx, fy - 15 - i * 3, 4, 0, TAU); ctx.fill();
-      }
-    }
+    const wx = k * step, gy = groundAt(wx);
+    if (gy != null) drawDecor(decor, wx, wx - camX, gy, hash(mod(k, L / step)), s, lv);
   }
   // ground (holes drop below the screen)
   const gAt = x => groundAt(camX + x) ?? H + 40;
@@ -90,6 +124,31 @@ function drawObjects() {
       ctx.stroke();
     }
     ctx.restore();
+  }
+}
+
+function drawZones(pass) {
+  const { ctx, W, H } = view, camX = G.camX;
+  const gAt = x => groundAt(camX + x) ?? H + 40;
+  for (const z of allZones()) {
+    const x0 = sx(z.x - z.w / 2), x1 = x0 + z.w;
+    if (x1 < -40 || x0 > W + 40) continue;
+    if (pass === 'ground' && z.type === 'ice') {
+      ctx.strokeStyle = tint('#e6f8ff', G.sat, .95); ctx.lineWidth = 7; ctx.beginPath();
+      for (let x = x0; x <= x1; x += 6) x === x0 ? ctx.moveTo(x, gAt(x)) : ctx.lineTo(x, gAt(x));
+      ctx.stroke();
+    } else if (pass === 'ground' && z.type === 'lava') {
+      ctx.fillStyle = `rgba(255,${(90 + 40 * Math.sin(G.t * 3)) | 0},30,${.75 + .25 * Math.sin(G.t * 5)})`;
+      ctx.beginPath(); ctx.moveTo(x0, H + 30);
+      for (let x = x0; x <= x1; x += 6) ctx.lineTo(x, gAt(x) - 4);
+      ctx.lineTo(x1, H + 30); ctx.fill();
+    } else if (pass === 'water' && z.type === 'water') {
+      const top = waterSurface(z);
+      ctx.fillStyle = 'rgba(80,170,255,.45)'; ctx.beginPath(); ctx.moveTo(x0, top);
+      for (let x = x0; x <= x1; x += 6) ctx.lineTo(x, Math.max(top, gAt(x)));
+      ctx.lineTo(x1, top); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(220,245,255,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, top); ctx.lineTo(x1, top); ctx.stroke();
+    }
   }
 }
 
@@ -187,6 +246,7 @@ export function render() {
   ctx.save();
   if (G.shake > 0) ctx.translate(rnd(-G.shake, G.shake), rnd(-G.shake, G.shake));
   drawWorld();
+  drawZones('ground');
   drawObjects();
   drawPickups();
   for (const e of G.enemies) drawEnemy(e);
@@ -195,6 +255,12 @@ export function render() {
   ctx.fillStyle = '#ff8a3d';
   for (const b of G.ebullets) { ctx.beginPath(); ctx.arc(sx(b.x), b.y, 4, 0, TAU); ctx.fill(); }
   drawSpark(); drawPlayer();
+  drawZones('water');
+  for (const m of G.embers) {
+    const x = sx(m.x);
+    ctx.fillStyle = 'rgba(255,140,40,.35)'; ctx.beginPath(); ctx.arc(x, m.y, 8, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffd27a'; ctx.beginPath(); ctx.arc(x, m.y, 3.5, 0, TAU); ctx.fill();
+  }
   for (const p of G.parts) { ctx.globalAlpha = clamp(p.life / p.max, 0, 1); ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(sx(p.x), p.y, p.sz, 0, TAU); ctx.fill(); }
   ctx.globalAlpha = 1;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `600 13px ${HUDF}`;

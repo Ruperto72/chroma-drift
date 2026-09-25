@@ -3,6 +3,7 @@ import { G, view } from './state.js';
 import { rrect } from './util.js';
 import { curLevel } from './game.js';
 import { canBuy } from './pickups.js';
+import { windRatio } from './rules.js';
 
 export function hud() {
   const { ctx, W, H } = view, lv = curLevel();
@@ -32,6 +33,15 @@ export function hud() {
     if (f > 0) { rrect(ctx, x, y, Math.max(13, mw * f), 13, 6.5); ctx.fillStyle = COLORS[c]; ctx.fill(); }
     ctx.textAlign = 'center'; ctx.font = `600 10px ${HUDF}`; ctx.fillStyle = f >= 1 ? '#111' : '#fff';
     ctx.fillText(`${G.got[c]}/${G.need[c]}`, x + mw / 2, y + 7);
+  }
+  // wind
+  const wr = windRatio();
+  if (wr != null) {
+    const cx = W / 2, cy = 50, len = wr * 30;
+    ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx - len, cy); ctx.lineTo(cx + len, cy); ctx.stroke();
+    if (Math.abs(len) > 3) { const d = Math.sign(len); ctx.beginPath(); ctx.moveTo(cx + len + d * 2, cy); ctx.lineTo(cx + len - d * 6, cy - 5); ctx.lineTo(cx + len - d * 6, cy + 5); ctx.closePath(); ctx.fill(); }
+    ctx.textAlign = 'center'; ctx.font = `400 10px ${HUDF}`; ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillText('Wind', cx, cy + 12);
   }
   // banner
   if (G.banner) {
