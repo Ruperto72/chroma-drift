@@ -3,13 +3,14 @@ import { G, view } from '../src/state.js';
 import { loadTerrain } from '../src/terrain.js';
 import { updatePlayer } from '../src/player.js';
 import { loadZones } from '../src/zones.js';
+import { loadRules } from '../src/rules.js';
 
 const flat = Array(48).fill(100); // ground y 440
 
 function setup(objects, P, extra = {}) {
   view.H = 540;
   const level = { ground: flat, objects, ...extra };
-  loadTerrain(level); loadZones(level);
+  loadTerrain(level); loadZones(level); loadRules(level);
   Object.assign(G, { state: 'play', dead: 0, shield: 0, lives: 3, t: 0, parts: [], own: { thrust: false, anti: false, rapid: false, double: false, sat: false } });
   G.P = { x: 0, y: 0, vx: 0, vy: 0, r: 18, spin: 0, ang: 0, face: 1, inv: 0, ...P };
 }
@@ -105,5 +106,11 @@ describe('updatePlayer with objects', () => {
     Object.assign(G, { dead: .01, lives: 2 });
     updatePlayer(1 / 60);
     expect(Math.abs(G.P.x - 1000)).toBeGreaterThanOrEqual(80 + 18);
+  });
+  it('is pushed sideways by the wind', () => {
+    setup([], { x: 1000, y: 200 }, { rules: { wind: { strength: 160, period: 8 } } });
+    G.t = 2;
+    updatePlayer(1 / 60);
+    expect(G.P.vx).toBeCloseTo(160 / 60, 6);
   });
 });

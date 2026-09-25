@@ -1,6 +1,7 @@
 import { TOP, COLORS } from './config.js';
 import { LEVELS } from './levels/index.js';
 import { loadZones } from './zones.js';
+import { loadRules, updateEmbers } from './rules.js';
 import { G, view } from './state.js';
 import { lerp, rnd, wd } from './util.js';
 import { sfx } from './audio.js';
@@ -27,6 +28,7 @@ export function startLevel() {
   G.got = [0, 0, 0]; G.sat = 0; G.spawnT = 1.8; G.clearT = 0;
   loadTerrain(curLevel());
   loadZones(curLevel());
+  loadRules(curLevel());
   G.P = { x: 0, y: TOP + 120, vx: 0, vy: 0, r: 18, spin: G.state === 'menu' ? .45 : 0, ang: 0, face: 1, inv: 2 };
   G.camX = G.P.x - view.W / 2;
   G.spark = { x: G.P.x - 40, y: G.P.y - 30, a: 0 };
@@ -37,7 +39,7 @@ export function startLevel() {
 export function levelClear() {
   G.state = 'clear'; G.clearT = 0;
   for (const e of G.enemies) burst(e.x, e.y, e.color >= 0 ? COLORS[e.color] : '#fff', 10);
-  G.enemies = []; G.ebullets = [];
+  G.enemies = []; G.ebullets = []; G.embers = [];
   const bonus = 1000 * (G.level + 1); G.score += bonus;
   banner('The colours are back!  +' + bonus);
   sfx('clear'); sfx('clear', .18); sfx('gem', .4);
@@ -92,6 +94,7 @@ export function update(dt) {
     }
 
     updateObjects(dt);
+    updateEmbers(dt);
     updateEnemies(dt);
 
     // bullets
@@ -110,6 +113,8 @@ export function update(dt) {
         }
         continue;
       }
+      const m = G.embers.find(m => !m.dead && Math.abs(wd(b.x - m.x)) < 10 && Math.abs(b.y - m.y) < 10);
+      if (m) { m.dead = true; b.life = 0; burst(m.x, m.y, '#ffb347', 6, 100); continue; }
       for (const e of G.enemies) {
         if (e.dead) continue;
         if (Math.abs(wd(b.x - e.x)) < e.r + 7 && Math.abs(b.y - e.y) < e.r + 7) {
@@ -133,12 +138,17 @@ export function update(dt) {
         const dx = wd(b.x - P.x), dy = b.y - P.y;
         if (b.life > 0 && dx * dx + dy * dy < (P.r + 4) ** 2) { b.life = 0; if (G.shield <= 0 && P.inv <= 0) die(); }
       }
+      for (const m of G.embers) {
+        const dx = wd(m.x - P.x), dy = m.y - P.y;
+        if (!m.dead && dx * dx + dy * dy < (P.r + 5) ** 2) { m.dead = true; if (G.shield <= 0 && P.inv <= 0) die(); }
+      }
     }
     if (own.sat) {
       for (const e of G.enemies) if (!e.dead && Math.hypot(wd(e.x - spark.x), e.y - spark.y) < e.r + 10) killEnemy(e);
       for (const b of G.ebullets) if (Math.hypot(wd(b.x - spark.x), b.y - spark.y) < 12) { b.life = 0; burst(b.x, b.y, '#9ff', 5, 90); }
     }
     G.ebullets = G.ebullets.filter(b => b.life > 0 && b.y < view.H && b.y > 0);
+    G.embers = G.embers.filter(m => !m.dead);
     const cx = G.camX + view.W / 2;
     G.enemies = G.enemies.filter(e => !e.dead && !(e.age > 4 && Math.abs(wd(e.x - cx)) > view.W / 2 + 520));
 

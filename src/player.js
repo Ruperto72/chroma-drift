@@ -7,6 +7,7 @@ import { burst } from './fx.js';
 import { inX, inY } from './input.js';
 import { gameOver } from './game.js';
 import { zoneAt, waterAt, inLava, lavaBelow } from './zones.js';
+import { windForce } from './rules.js';
 
 export function shoot(x, y, dir) { G.bullets.push({ x, y, vx: dir * 720 + G.P.vx * .3, life: .85 }); }
 
@@ -44,6 +45,7 @@ export function updatePlayer(dt) {
       if (!ix && Math.abs(P.vx) > 20) P.face = Math.sign(P.vx);
     }
   }
+  P.vx += windForce() * dt;
   const prevBottom = P.y + P.r;
   P.x += P.vx * dt; P.y += P.vy * dt;
   collideCircle(P, prevBottom);

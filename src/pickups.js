@@ -5,6 +5,7 @@ import { surfaceBelow } from './terrain.js';
 import { sfx } from './audio.js';
 import { addText, banner, burst } from './fx.js';
 import { levelClear } from './game.js';
+import { windForce } from './rules.js';
 
 export function pickup(x, y, extra) { return Object.assign({ x, y, vx: rnd(-30, 30), vy: -90, t: 0 }, extra); }
 
@@ -23,6 +24,7 @@ export function activate() {
 function updatePickups(list, dt, onCollect) {
   const P = G.P, spark = G.spark;
   for (const d of list) {
+    if (d.vy) d.vx += windForce() * .5 * dt;
     d.t += dt; d.vy = Math.min(d.vy + 220 * dt, 80); d.vx *= .98;
     const prevY = d.y;
     d.x += d.vx * dt; d.y += d.vy * dt;
