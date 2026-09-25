@@ -1,6 +1,6 @@
-import { L, TAU } from './config.js';
+import { L, TAU, TOP } from './config.js';
 import { view } from './state.js';
-import { mod, wd } from './util.js';
+import { mod, wd, clamp } from './util.js';
 
 const SHAPES = {
   rock:     { solid: true },
@@ -9,35 +9,49 @@ const SHAPES = {
   mushroom: { solid: true, w: 44, h: 28, bounce: 1.6 },
   cloud:    { h: 14 },
   thorns:   { h: 14, hazard: true },
+  bush:     { w: 50, h: 34 },
+  cliff:    { solid: true, w: 40, h: 300, stopsShots: true },
   hole:     {},
 };
 
-let pts = [], step = L, holes = [], objs = [];
+let T = {};
 
 export function defaultGround(n = 240) {
   return Array.from({ length: n }, (_, i) => { const t = i / n * TAU; return 82 + 22 * Math.sin(t * 5) + 12 * Math.sin(t * 13 + 1.3) + 6 * Math.sin(t * 31 + .4); });
 }
 
 export function loadTerrain(level) {
-  pts = Array.isArray(level.ground) ? level.ground : defaultGround();
-  step = L / pts.length;
+  const cave = level.width != null, pts = Array.isArray(level.ground) ? level.ground : defaultGround();
   const all = (level.objects || []).map(o => ({ ...SHAPES[o.type], ...o, flash: 0, squash: 0, gone: false }));
-  holes = all.filter(o => o.type === 'hole');
-  objs = all.filter(o => o.type !== 'hole');
+  T = {
+    pts, ceil: cave ? level.ceiling : null, loop: !cave, width: cave ? level.width : L,
+    step: cave ? level.width / (pts.length - 1) : L / pts.length,
+    holes: all.filter(o => o.type === 'hole'), objs: all.filter(o => o.type !== 'hole'),
+  };
 }
 
-export function heightAt(x) {
-  const u = mod(x, L) / step, i = Math.floor(u), f = u - i, n = pts.length;
-  const a = pts[i % n], b = pts[(i + 1) % n];
+export const saveTerrain = () => T;
+export function restoreTerrain(state) { T = state; }
+
+function sample(arr, x) {
+  const n = arr.length, u = T.loop ? mod(x, L) / T.step : clamp(x, 0, T.width) / T.step;
+  const i = Math.min(Math.floor(u), T.loop ? n - 1 : n - 2), f = u - i;
+  const a = arr[i % n], b = arr[(i + 1) % n];
   return a + (b - a) * (1 - Math.cos(Math.PI * f)) / 2;
 }
 
-export function groundAt(x) {
-  for (const h of holes) if (Math.abs(wd(x - h.x)) < h.w / 2) return null;
-  return view.H - heightAt(x);
-}
+export const heightAt = x => sample(T.pts, x);
+export const ceilingAt = x => T.ceil ? view.H - sample(T.ceil, x) : TOP;
+export const caveWidth = () => T.loop ? null : T.width;
 
-export const objects = () => objs;
+export const holes = () => T.holes;
+export function holeAt(x) { return T.holes.find(h => Math.abs(wd(x - h.x)) < h.w / 2) || null; }
+export function openHole(x, w, cave) { T.holes.push({ type: 'hole', x, w, cave }); }
+export function closeHole(cave) { T.holes = T.holes.filter(h => h.cave !== cave); }
+
+export function groundAt(x) { return holeAt(x) ? null : view.H - heightAt(x); }
+
+export const objects = () => T.objs;
 
 export function objBox(o) {
   if (o.y != null) { const top = view.H - o.y; return { top, bottom: top + o.h }; }
@@ -47,7 +61,7 @@ export function objBox(o) {
 
 export function surfaceBelow(x, y) {
   let best = null;
-  for (const o of objs) {
+  for (const o of T.objs) {
     if (o.gone || !(o.solid || o.type === 'cloud')) continue;
     if (Math.abs(wd(x - o.x)) > o.w / 2) continue;
     const top = objBox(o).top;
@@ -60,7 +74,7 @@ export function surfaceBelow(x, y) {
 
 export function collideCircle(b, prevBottom = Infinity) {
   let hit = null;
-  for (const o of objs) {
+  for (const o of T.objs) {
     if (o.gone || !o.solid) continue;
     const box = objBox(o), dx = wd(b.x - o.x), hw = o.w / 2;
     if (box.top >= prevBottom - 1) continue; // was above the top last frame: landing handles it
@@ -76,7 +90,7 @@ export function collideCircle(b, prevBottom = Infinity) {
 }
 
 export function touchesHazard(b) {
-  for (const o of objs) {
+  for (const o of T.objs) {
     if (o.gone || !o.hazard) continue;
     if (Math.abs(wd(b.x - o.x)) < o.w / 2 + b.r * .5 && b.y + b.r > objBox(o).top + 3) return o;
   }
@@ -84,11 +98,11 @@ export function touchesHazard(b) {
 }
 
 export function hazardBelow(x, r) {
-  return objs.some(o => !o.gone && o.hazard && Math.abs(wd(x - o.x)) < o.w / 2 + r);
+  return T.objs.some(o => !o.gone && o.hazard && Math.abs(wd(x - o.x)) < o.w / 2 + r);
 }
 
 export function hitObjectWithBullet(bl) {
-  for (const o of objs) {
+  for (const o of T.objs) {
     if (o.gone || !o.stopsShots) continue;
     const box = objBox(o);
     if (Math.abs(wd(bl.x - o.x)) < o.w / 2 + 4 && bl.y > box.top && bl.y < box.bottom) return o;
@@ -103,7 +117,7 @@ export function damageObject(o) {
 }
 
 export function updateObjects(dt) {
-  for (const o of objs) {
+  for (const o of T.objs) {
     if (o.flash > 0) o.flash -= dt;
     if (o.squash > 0) o.squash = Math.max(0, o.squash - dt * 4);
   }
