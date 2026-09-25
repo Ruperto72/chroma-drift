@@ -1,5 +1,7 @@
 # Chroma Drift
 
+**▶ Play in your browser: https://ruperto72.github.io/chroma-drift/**
+
 A modern take on the 80s bouncing-ball colour collector. The world has lost its colours: bounce through four looping worlds, shoot the creatures, collect the colour drops they leave behind and fill the red, green and blue meters to paint the landscape back to life.
 
 The ball bounces on its own and at first you only control its spin. Green gems move the cursor along the power bar – activate a power when it's lit to earn **Thrust** (full steering), **Antigrav** (free flight), **Rapid** fire, **Double** shots, a **Satellite** helper or a temporary **Shield**.
