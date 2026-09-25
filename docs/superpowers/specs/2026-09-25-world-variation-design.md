@@ -203,6 +203,8 @@ Efter fyra världar börjar varvet om med `need + 2` per varv, som i dag.
 - `floor` och `ceiling`: kontrollpunkter per 100 enheter över `width`. Grottor loopar inte; kameran klampas till `[0, width − W]`.
 - `loot`: fasta positioner för pärlor, poäng-kristaller och ev. `extraLife`.
 - Samma objekttyper som på ytan kan användas.
+- `loot`-typer: `gem` (grön pärla, flyttar kraftmarkören), `star` (+200 poäng), `life` (extraliv, högst ett per värld). `foes`: `[{ x, y }]` – färglösa svävande fiender i mörkergrottor.
+- Ingångsmått: hål bredd 70; buske 50×34 (ej solid, 1 träff); sten 64×46 (3 träffar); klippa 40×300 (solid, öppning ±26 kring `entrance.y`). Ingångar ligger minst 300 enheter från x = 0.
 
 ### Ingångar
 
@@ -224,7 +226,7 @@ En ljusstråle i grottans högra ände. Kontakt → tillbaka till ytan vid ingå
 
 ### Hemligheter
 
-`G.secretsFound` räknar besökta dolda grottor per värld. Vid `levelClear` visas t.ex. "Secrets found: 2/3" (räknar alla grottor i världen). Räknas per spelomgång, sparas inte.
+`G.cavesUsed` (Set med grott-id) fylls när man går in i en grotta – synlig eller dold. Vid klar värld visas "Secrets found: X/Y" där X = antal besökta grottor och Y = antal grottor i världen. Räknas per spelomgång och värld, sparas inte.
 
 ### Tester
 

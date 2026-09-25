@@ -1,7 +1,7 @@
 import { TAU, L, TOP, HUDF, COLORS } from './config.js';
 import { G, view } from './state.js';
 import { mod, wd, clamp, rnd, tint, hash, rrect } from './util.js';
-import { groundAt, surfaceBelow, objects, objBox } from './terrain.js';
+import { groundAt, surfaceBelow, objects, objBox, holes, ceilingAt, caveWidth } from './terrain.js';
 import { curLevel } from './game.js';
 import { allZones, waterSurface } from './zones.js';
 
@@ -80,13 +80,67 @@ function drawWorld() {
   ctx.fillStyle = tint(lv.ground, s); ctx.beginPath(); ctx.moveTo(-30, H + 30);
   for (let x = -30; x <= W + 38; x += 6) ctx.lineTo(x, gAt(x));
   ctx.lineTo(W + 38, H + 30); ctx.fill();
+  ctx.fillStyle = '#0b0810';
+  for (const h of holes()) {
+    const x0 = sx(h.x - h.w / 2);
+    if (x0 > W + 40 || x0 + h.w < -40) continue;
+    ctx.fillRect(x0, Math.min(gAt(x0 - 2), gAt(x0 + h.w + 2)), h.w, H);
+  }
   ctx.strokeStyle = tint(lv.grass, s); ctx.lineWidth = 5; ctx.beginPath();
   for (let x = -30; x <= W + 38; x += 6) { const y = gAt(x); x === -30 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
   ctx.stroke();
 }
 
+function drawCave() {
+  const { ctx, W, H } = view, camX = G.camX, pal = curLevel().palette, s = Math.max(G.sat, .5), cw = caveWidth();
+  const cAt = x => ceilingAt(camX + x), gAt = x => groundAt(camX + x) ?? H + 40;
+  ctx.fillStyle = '#120f1a'; ctx.fillRect(-30, -30, W + 60, H + 60);
+  ctx.fillStyle = tint(pal.ground, s);
+  ctx.beginPath(); ctx.moveTo(-30, -30);
+  for (let x = -30; x <= W + 38; x += 6) ctx.lineTo(x, cAt(x));
+  ctx.lineTo(W + 38, -30); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-30, H + 30);
+  for (let x = -30; x <= W + 38; x += 6) ctx.lineTo(x, gAt(x));
+  ctx.lineTo(W + 38, H + 30); ctx.fill();
+  ctx.strokeStyle = tint(pal.grass, s * .6); ctx.lineWidth = 3; ctx.beginPath();
+  for (let x = -30; x <= W + 38; x += 6) x === -30 ? ctx.moveTo(x, gAt(x)) : ctx.lineTo(x, gAt(x));
+  ctx.stroke();
+  ctx.fillRect(-30, -30, -camX + 30, H + 60);
+  ctx.fillRect(cw - camX, -30, W + 60, H + 60);
+  const bx = cw - 30 - camX, top = cAt(bx), g = ctx.createLinearGradient(bx - 30, 0, bx + 30, 0);
+  g.addColorStop(0, 'rgba(255,245,200,0)'); g.addColorStop(.5, `rgba(255,245,200,${.45 + .15 * Math.sin(G.t * 4)})`); g.addColorStop(1, 'rgba(255,245,200,0)');
+  ctx.fillStyle = g; ctx.fillRect(bx - 30, top, 60, gAt(bx) - top);
+}
+
+function drawLoot() {
+  const { ctx, H } = view;
+  for (const it of G.loot) {
+    const x = sx(it.x), y = H - it.y + Math.sin(G.t * 3 + it.x) * 4;
+    if (it.type === 'gem') {
+      ctx.fillStyle = 'rgba(184,255,234,.25)'; ctx.beginPath(); ctx.arc(x, y, 13, 0, TAU); ctx.fill();
+      drawGemShape(x, y, 9, G.t);
+    } else if (it.type === 'star') {
+      ctx.fillStyle = '#ffe066'; ctx.beginPath();
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 4.5 : 11; ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); }
+      ctx.closePath(); ctx.fill();
+    } else if (it.type === 'life') {
+      const g = ctx.createRadialGradient(x - 3, y - 4, 1, x, y, 11);
+      g.addColorStop(0, '#fff8dc'); g.addColorStop(.5, '#ffcf4a'); g.addColorStop(1, '#d9642a');
+      ctx.fillStyle = 'rgba(255,207,74,.3)'; ctx.beginPath(); ctx.arc(x, y, 17, 0, TAU); ctx.fill();
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 11, 0, TAU); ctx.fill();
+    }
+  }
+}
+
+function drawDarkness() {
+  const { ctx, W, H } = view, x = sx(G.P.x), y = G.P.y;
+  const g = ctx.createRadialGradient(x, y, 50, x, y, 130);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.97)');
+  ctx.fillStyle = g; ctx.fillRect(-30, -30, W + 60, H + 60);
+}
+
 function drawObjects() {
-  const { ctx, W } = view, s = G.sat;
+  const { ctx, W } = view, s = G.sat, pal = curLevel().palette;
   for (const o of objects()) {
     if (o.gone) continue;
     const x = sx(o.x); if (x < -o.w - 40 || x > W + o.w + 40) continue;
@@ -95,6 +149,13 @@ function drawObjects() {
     if (o.type === 'rock') {
       ctx.fillStyle = tint('#8a8f99', s); rrect(ctx, l, top, o.w, o.h + 8, 10); ctx.fill();
       ctx.fillStyle = tint('#b9bec8', s); rrect(ctx, l + 5, top + 4, o.w - 10, 7, 3.5); ctx.fill();
+      if (o.crack) {
+        ctx.strokeStyle = 'rgba(20,16,28,.75)'; ctx.lineWidth = 2; ctx.beginPath();
+        ctx.moveTo(x - 4, top + 6); ctx.lineTo(x + 3, top + 18); ctx.lineTo(x - 2, top + 28); ctx.lineTo(x + 6, top + 40);
+        if (o.hp < 3) { ctx.moveTo(x + 3, top + 18); ctx.lineTo(x + 14, top + 22); }
+        if (o.hp < 2) { ctx.moveTo(x - 2, top + 28); ctx.lineTo(x - 14, top + 34); }
+        ctx.stroke();
+      }
     } else if (o.type === 'pillar') {
       ctx.fillStyle = tint('#7a6a5a', s); ctx.fillRect(l, top, o.w, o.h + 8);
       ctx.fillStyle = tint('#5e5044', s); for (let y = top + 18; y < top + o.h; y += 22) ctx.fillRect(l, y, o.w, 3);
@@ -122,6 +183,14 @@ function drawObjects() {
       if (o.hp < 3) { ctx.moveTo(x - 6, cy - 6); ctx.lineTo(x + 2, cy + 2); ctx.lineTo(x - 1, cy + 9); }
       if (o.hp < 2) { ctx.moveTo(x + 7, cy - 4); ctx.lineTo(x + 1, cy - 1); }
       ctx.stroke();
+    } else if (o.type === 'bush') {
+      ctx.fillStyle = tint(pal.grass, s * .8); ctx.beginPath();
+      ctx.arc(x - 13, top + 22, 13, 0, TAU); ctx.arc(x + 12, top + 21, 14, 0, TAU); ctx.arc(x, top + 13, 15, 0, TAU); ctx.fill();
+      ctx.fillStyle = tint(pal.deco, s); ctx.beginPath(); ctx.arc(x - 6, top + 10, 2.5, 0, TAU); ctx.arc(x + 9, top + 16, 2.5, 0, TAU); ctx.fill();
+    } else if (o.type === 'cliff') {
+      ctx.fillStyle = tint('#6b5d52', s); ctx.fillRect(l, top, o.w, o.h + 8);
+      ctx.fillStyle = tint('#54483f', s); for (let y = top + 14; y < top + o.h; y += 26) ctx.fillRect(l + (Math.round(y / 26) % 2 ? 6 : 0), y, o.w - 6, 3);
+      if (o.cave && !G.cavesUsed.has(o.cave)) { ctx.fillStyle = '#0b0810'; ctx.beginPath(); ctx.ellipse(x, view.H - o.opening, o.w / 2 - 4, 22, 0, 0, TAU); ctx.fill(); }
     }
     ctx.restore();
   }
@@ -250,10 +319,10 @@ export function render() {
   ctx.setTransform(S, 0, 0, S, 0, 0);
   ctx.save();
   if (G.shake > 0) ctx.translate(rnd(-G.shake, G.shake), rnd(-G.shake, G.shake));
-  drawWorld();
-  drawZones('ground');
+  if (G.scene === 'cave') drawCave(); else { drawWorld(); drawZones('ground'); }
   drawObjects();
   drawPickups();
+  drawLoot();
   for (const e of G.enemies) drawEnemy(e);
   ctx.fillStyle = '#fff6c2';
   for (const b of G.bullets) { const x = sx(b.x); rrect(ctx, x - 7, b.y - 2.5, 14, 5, 2.5); ctx.fill(); }
@@ -266,6 +335,7 @@ export function render() {
     ctx.fillStyle = 'rgba(255,140,40,.35)'; ctx.beginPath(); ctx.arc(x, m.y, 8, 0, TAU); ctx.fill();
     ctx.fillStyle = '#ffd27a'; ctx.beginPath(); ctx.arc(x, m.y, 3.5, 0, TAU); ctx.fill();
   }
+  if (G.scene === 'cave' && G.cave.type === 'dark') drawDarkness();
   for (const p of G.parts) { ctx.globalAlpha = clamp(p.life / p.max, 0, 1); ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(sx(p.x), p.y, p.sz, 0, TAU); ctx.fill(); }
   ctx.globalAlpha = 1;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `600 13px ${HUDF}`;

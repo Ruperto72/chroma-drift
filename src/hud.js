@@ -58,6 +58,11 @@ export function hud() {
     ctx.textAlign = 'center'; ctx.font = `600 16px ${HUDF}`; ctx.fillStyle = `rgba(255,255,255,${.6 + .4 * Math.sin(G.t * 5)})`;
     ctx.fillText('Press FIRE or tap the screen for the next world', W / 2, H * .33 + 40);
   }
+  const caves = curLevel().caves || [];
+  if (G.state === 'clear' && caves.length) {
+    ctx.textAlign = 'center'; ctx.font = `400 14px ${HUDF}`; ctx.fillStyle = 'rgba(255,255,255,.85)';
+    ctx.fillText(`Secrets found: ${G.cavesUsed.size}/${caves.length}`, W / 2, H * .33 + 66);
+  }
   if (G.paused) {
     ctx.fillStyle = 'rgba(6,7,13,.6)'; ctx.fillRect(0, 0, W, H);
     ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = `600 24px ${HUDF}`; ctx.fillText('Paused', W / 2, H / 2 - 10);
