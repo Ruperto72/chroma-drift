@@ -1,7 +1,7 @@
 import { TOP } from './config.js';
 import { G } from './state.js';
 import { clamp, lerp, rnd } from './util.js';
-import { groundY } from './terrain.js';
+import { groundAt } from './terrain.js';
 import { sfx } from './audio.js';
 import { burst } from './fx.js';
 import { inX, inY } from './input.js';
@@ -41,7 +41,7 @@ export function updatePlayer(dt) {
     }
   }
   P.x += P.vx * dt; P.y += P.vy * dt;
-  const gy = groundY(P.x);
+  const gy = groundAt(P.x);
   if (P.y + P.r > gy) {
     P.y = gy - P.r;
     if (own.anti) P.vy = Math.min(0, P.vy);

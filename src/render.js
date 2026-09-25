@@ -1,7 +1,7 @@
 import { TAU, L, TOP, HUDF, COLORS } from './config.js';
 import { G, view } from './state.js';
 import { mod, clamp, rnd, tint, hash, rrect } from './util.js';
-import { groundY } from './terrain.js';
+import { groundAt } from './terrain.js';
 import { curLevel } from './game.js';
 
 const sx = x => mod(x - G.camX + 300, L) - 300;
@@ -25,7 +25,8 @@ function drawWorld() {
   // deco (trees & flowers) sitting on ground
   const step = 200, k0 = Math.floor((camX - 60) / step), k1 = Math.floor((camX + W + 60) / step);
   for (let k = k0; k <= k1; k++) {
-    const wx = k * step, h = hash(mod(k, L / step)), x = wx - camX, gy = groundY(wx);
+    const wx = k * step, h = hash(mod(k, L / step)), x = wx - camX, gy = groundAt(wx);
+    if (gy == null) continue;
     if (h > .62) {
       const th = 30 + h * 30;
       ctx.fillStyle = tint('#5a3b22', s); ctx.fillRect(x - 3, gy - th, 6, th + 4);
@@ -33,18 +34,20 @@ function drawWorld() {
       ctx.fillStyle = tint(lv.deco, s); ctx.beginPath(); ctx.arc(x + 6, gy - th - 4, 3.5, 0, TAU); ctx.arc(x - 7, gy - th + 5, 3, 0, TAU); ctx.fill();
     } else if (h > .3) {
       for (let i = 0; i < 3; i++) {
-        const fx = x + (i - 1) * 12, fy = groundY(wx + (i - 1) * 12);
+        const fx = x + (i - 1) * 12, fy = groundAt(wx + (i - 1) * 12);
+        if (fy == null) continue;
         ctx.strokeStyle = tint(lv.grass, s); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - 14 - i * 3); ctx.stroke();
         ctx.fillStyle = tint(lv.deco, s); ctx.beginPath(); ctx.arc(fx, fy - 15 - i * 3, 4, 0, TAU); ctx.fill();
       }
     }
   }
-  // ground
+  // ground (holes drop below the screen)
+  const gAt = x => groundAt(camX + x) ?? H + 40;
   ctx.fillStyle = tint(lv.ground, s); ctx.beginPath(); ctx.moveTo(-30, H + 30);
-  for (let x = -30; x <= W + 38; x += 6) ctx.lineTo(x, groundY(camX + x));
+  for (let x = -30; x <= W + 38; x += 6) ctx.lineTo(x, gAt(x));
   ctx.lineTo(W + 38, H + 30); ctx.fill();
   ctx.strokeStyle = tint(lv.grass, s); ctx.lineWidth = 5; ctx.beginPath();
-  for (let x = -30; x <= W + 38; x += 6) { const y = groundY(camX + x); x === -30 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+  for (let x = -30; x <= W + 38; x += 6) { const y = gAt(x); x === -30 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
   ctx.stroke();
 }
 
@@ -52,7 +55,7 @@ function drawPlayer() {
   if (G.dead > 0 || G.state === 'over') return;
   const { ctx } = view, P = G.P;
   if (P.inv > 0 && Math.floor(G.t * 12) % 2) return;
-  const x = sx(P.x), y = P.y, r = P.r, gy = groundY(P.x);
+  const x = sx(P.x), y = P.y, r = P.r, gy = groundAt(P.x) ?? view.H + 40;
   const k = clamp(1 - (gy - y) / 320, .2, 1);
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, gy + 1, r * k, 4 * k, 0, 0, TAU); ctx.fill();
   ctx.save(); ctx.translate(x, y);

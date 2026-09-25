@@ -8,6 +8,7 @@ import { firing } from './input.js';
 import { updatePlayer, die, shoot } from './player.js';
 import { spawnWave, killEnemy, updateEnemies } from './enemies.js';
 import { updateAllPickups } from './pickups.js';
+import { loadTerrain } from './terrain.js';
 
 export function curLevel() { return LEVELS[G.level % LEVELS.length]; }
 
@@ -23,6 +24,7 @@ export function startLevel() {
   const extra = Math.floor(G.level / LEVELS.length) * 2;
   G.need = curLevel().need.map(n => n + extra);
   G.got = [0, 0, 0]; G.sat = 0; G.spawnT = 1.8; G.clearT = 0;
+  loadTerrain(curLevel());
   G.P = { x: 0, y: TOP + 120, vx: 0, vy: 0, r: 18, spin: G.state === 'menu' ? .45 : 0, ang: 0, face: 1, inv: 2 };
   G.camX = G.P.x - view.W / 2;
   G.spark = { x: G.P.x - 40, y: G.P.y - 30, a: 0 };
