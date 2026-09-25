@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { LEVELS } from '../src/levels/index.js';
 import { L } from '../src/config.js';
 import { view } from '../src/state.js';
-import { loadTerrain, heightAt } from '../src/terrain.js';
+import { loadTerrain, heightAt, ceilingAt } from '../src/terrain.js';
 
 const REQUIRED = { rock: ['w', 'h'], pillar: ['h'], mushroom: [], cloud: ['y', 'w'], thorns: ['w'], crystal: ['c'], hole: ['w'] };
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -55,6 +55,56 @@ describe.each(LEVELS.map(l => [l.name, l]))('%s', (_, lv) => {
     expect(['meadow', 'dusk', 'icicles', 'embers']).toContain(lv.decor);
     for (const k of Object.keys(lv.rules)) expect(['wind', 'embers']).toContain(k);
   });
+  it('has one visible and one or two hidden caves with valid entrances', () => {
+    const kinds = lv.caves.map(c => c.entrance.kind);
+    expect(kinds.filter(k => k === 'hole')).toHaveLength(1);
+    expect(kinds.length - 1).toBeGreaterThanOrEqual(1);
+    expect(kinds.length - 1).toBeLessThanOrEqual(2);
+    view.H = 540; loadTerrain(lv);
+    for (const c of lv.caves) {
+      expect(['hole', 'bush', 'rock', 'cliff']).toContain(c.entrance.kind);
+      expect(['treasure', 'dark']).toContain(c.type);
+      expect(c.entrance.x).toBeGreaterThanOrEqual(300);
+      expect(c.entrance.x).toBeLessThan(L - 300);
+      if (c.entrance.kind === 'cliff') {
+        expect(c.entrance.y).toBeGreaterThanOrEqual(heightAt(c.entrance.x) + 60);
+        expect(c.entrance.y).toBeLessThanOrEqual(heightAt(c.entrance.x) + 260);
+      }
+    }
+  });
+  it('keeps cave entrances clear of objects and zones', () => {
+    const ew = { hole: 70, bush: 50, rock: 64, cliff: 40 };
+    for (const c of lv.caves) {
+      const w = ew[c.entrance.kind];
+      for (const o of lv.objects) expect(Math.abs(c.entrance.x - o.x)).toBeGreaterThanOrEqual((w + (o.w || 44)) / 2 + 20);
+      for (const z of lv.zones) expect(Math.abs(c.entrance.x - z.x)).toBeGreaterThanOrEqual((w + z.w) / 2 + 20);
+    }
+  });
+  it('shapes every cave with room to bounce', () => {
+    for (const c of lv.caves) {
+      expect(c.floor).toHaveLength(c.width / 100 + 1);
+      expect(c.ceiling).toHaveLength(c.width / 100 + 1);
+      c.floor.forEach((f, i) => {
+        expect(c.ceiling[i] - f).toBeGreaterThanOrEqual(180);
+        expect(c.ceiling[i]).toBeLessThanOrEqual(430);
+      });
+    }
+  });
+  it('places cave loot inside the cave', () => {
+    for (const c of lv.caves) {
+      view.H = 540; loadTerrain({ width: c.width, ground: c.floor, ceiling: c.ceiling });
+      for (const it of c.loot) {
+        expect(['gem', 'star', 'life']).toContain(it.type);
+        expect(it.x).toBeGreaterThanOrEqual(100);
+        expect(it.x).toBeLessThanOrEqual(c.width - 100);
+        expect(it.y).toBeGreaterThanOrEqual(heightAt(it.x) + 20);
+        expect(it.y).toBeLessThanOrEqual(540 - ceilingAt(it.x) - 20);
+      }
+    }
+  });
+  it('hides exactly one extra life per world', () => {
+    expect(lv.caves.flatMap(c => c.loot).filter(it => it.type === 'life')).toHaveLength(1);
+  });
 });
 
 describe('world profiles', () => {
@@ -75,5 +125,12 @@ describe('world profiles', () => {
   it('gives Ember Woods lava and embers', () => {
     expect(ember.zones.some(z => z.type === 'lava')).toBe(true);
     expect(ember.rules.embers).toBeDefined();
+  });
+});
+
+describe('caves across worlds', () => {
+  it('have unique ids', () => {
+    const ids = LEVELS.flatMap(l => l.caves.map(c => c.id));
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
