@@ -16,6 +16,27 @@ Eget namn och egna figurer – återanvänd inga namn eller grafik från origina
 - Fiender tappar R/G/B-droppar; fulla mätare = världen färgläggs, nästa nivå
 - Touch: virtuell joystick + FIRE/POWER-knappar
 
+## Tester och verifiering
+- `test/levels.test.js` validerar banfilerna (fält, mått, objekt/zoner/ingångar inom världen och fria från varandra, loot i grottorna, ett extraliv per värld)
+- `test/playability.test.js` simulerar riktig fysik i spinnläge (60 och 30 fps): lavagropar, pelare, alla grottor och att klippan går att flyga över. Kör `npm test` efter varje ändring i src/levels/
+- Node kan inte importera banfilernas JSON utan import-attribut – kör simuleringar som Vitest-tester
+- Headless Edge kör bara en `requestAnimationFrame` under virtuell tid: driv `update()`/`render()`/`hud()` manuellt i en temporär smoke-sida
+- `index.html` kräver server (ES-moduler) – öppna inte via file://
+
+## Dokumentation
+- Design: docs/superpowers/specs/2026-09-25-world-variation-design.md
+- Implementationsplaner per delprojekt: docs/superpowers/plans/
+
+## Kända småbrister (uppskjutna)
+- Droppar som hamnar i en lavagrop går bara att nå med Satellit/Antigrav
+- Vinden märks knappt i Thrust/Antigrav; vinddrift på droppar beror på fps och påverkar även pärlor
+- Studshöjden är något lägre vid 30 fps (~126 mot ~136)
+- Glöd faller igenom stenar/pelare/moln
+- Vid scenbyte yta↔grotta flyger satelliten, partiklar och flygtexter med fel koordinater en kort stund
+- I läget 'clear' kan bollen rulla ner i ett hål utom synhåll, och klippan kan ta in en i en grotta
+- Grottfienders position räknas vid inträdet (fel efter storleksändring i grottan); de skjuter genom berget från värld 2
+- Utgång från klippgrotta hamnar alltid till höger om klippan
+
 ## Nästa steg (idéer)
 - Gryt-mekanik: blanda R/G/B till målfärg per nivå
 - Fysiklägen som tillståndsmaskin, fiendevågor data-drivna från JSON
