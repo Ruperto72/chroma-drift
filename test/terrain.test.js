@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { loadTerrain, groundAt, surfaceBelow, collideCircle, touchesHazard, hazardBelow, hitObjectWithBullet, damageObject, objects } from '../src/terrain.js';
+import { loadTerrain, groundAt, surfaceBelow, collideCircle, touchesHazard, hazardBelow, hitObjectWithBullet, damageObject, objects, ceilingAt, caveWidth, openHole, closeHole, holeAt, saveTerrain, restoreTerrain } from '../src/terrain.js';
 import { view } from '../src/state.js';
-import { L, TAU } from '../src/config.js';
+import { L, TAU, TOP } from '../src/config.js';
 
 const oldGround = x => { const t = x / L * TAU; return 540 - 82 - 22 * Math.sin(t * 5) - 12 * Math.sin(t * 13 + 1.3) - 6 * Math.sin(t * 31 + .4); };
 const ramp = Array.from({ length: 48 }, (_, i) => 100 + i);
@@ -145,5 +145,50 @@ describe('non-array ground', () => {
     const b = { x: 0, y: 200, vx: 0, r: 18 };
     expect(collideCircle(b)).toBeNull();
     expect(b.x).toBe(0);
+  });
+});
+
+describe('cave terrain', () => {
+  const cave = { width: 1200, ground: [70, 75, 90, 70, 60, 80, 110, 140, 120, 90, 70, 70, 70], ceiling: [300, 320, 340, 330, 300, 290, 320, 360, 380, 360, 330, 310, 300] };
+  beforeEach(() => { view.H = 540; loadTerrain(cave); });
+
+  it('does not loop and clamps at the cave ends', () => {
+    expect(groundAt(0)).toBe(540 - 70);
+    expect(groundAt(700)).toBe(540 - 140);
+    expect(groundAt(1200)).toBe(540 - 70);
+    expect(groundAt(1300)).toBe(540 - 70);
+    expect(caveWidth()).toBe(1200);
+  });
+  it('has a ceiling', () => {
+    expect(ceilingAt(800)).toBe(540 - 380);
+  });
+  it('uses TOP as ceiling and has no width on the surface', () => {
+    loadTerrain({});
+    expect(ceilingAt(800)).toBe(TOP);
+    expect(caveWidth()).toBeNull();
+  });
+});
+
+describe('holes at runtime', () => {
+  beforeEach(() => { view.H = 540; loadTerrain({ ground: Array(48).fill(100) }); });
+
+  it('opens and closes a hole tagged with a cave', () => {
+    openHole(1000, 70, 'c1');
+    expect(groundAt(1000)).toBeNull();
+    expect(holeAt(1020)).toMatchObject({ cave: 'c1' });
+    closeHole('c1');
+    expect(groundAt(1000)).toBe(440);
+    expect(holeAt(1020)).toBeNull();
+  });
+  it('saves and restores terrain including object state', () => {
+    loadTerrain({ ground: Array(48).fill(100), objects: [{ type: 'crystal', x: 500, c: 0 }] });
+    objects()[0].gone = true;
+    const saved = saveTerrain();
+    loadTerrain({ width: 1200, ground: Array(13).fill(60), ceiling: Array(13).fill(300) });
+    expect(caveWidth()).toBe(1200);
+    restoreTerrain(saved);
+    expect(caveWidth()).toBeNull();
+    expect(objects()[0].gone).toBe(true);
+    expect(groundAt(1000)).toBe(440);
   });
 });
