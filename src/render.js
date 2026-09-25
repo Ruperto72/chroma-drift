@@ -1,7 +1,7 @@
 import { TAU, L, TOP, HUDF, COLORS } from './config.js';
 import { G, view } from './state.js';
 import { mod, clamp, rnd, tint, hash, rrect } from './util.js';
-import { groundAt } from './terrain.js';
+import { groundAt, surfaceBelow, objects, objBox } from './terrain.js';
 import { curLevel } from './game.js';
 
 const sx = x => mod(x - G.camX + 300, L) - 300;
@@ -51,11 +51,53 @@ function drawWorld() {
   ctx.stroke();
 }
 
+function drawObjects() {
+  const { ctx, W } = view, s = G.sat;
+  for (const o of objects()) {
+    if (o.gone) continue;
+    const x = sx(o.x); if (x < -o.w - 40 || x > W + o.w + 40) continue;
+    const { top } = objBox(o), l = x - o.w / 2;
+    ctx.save();
+    if (o.type === 'rock') {
+      ctx.fillStyle = tint('#8a8f99', s); rrect(ctx, l, top, o.w, o.h + 8, 10); ctx.fill();
+      ctx.fillStyle = tint('#b9bec8', s); rrect(ctx, l + 5, top + 4, o.w - 10, 7, 3.5); ctx.fill();
+    } else if (o.type === 'pillar') {
+      ctx.fillStyle = tint('#7a6a5a', s); ctx.fillRect(l, top, o.w, o.h + 8);
+      ctx.fillStyle = tint('#5e5044', s); for (let y = top + 18; y < top + o.h; y += 22) ctx.fillRect(l, y, o.w, 3);
+      ctx.fillStyle = tint('#9c8a76', s); ctx.fillRect(l - 4, top, o.w + 8, 8);
+    } else if (o.type === 'mushroom') {
+      ctx.fillStyle = tint('#f3e6c8', s); ctx.fillRect(x - 7, top + 10, 14, o.h);
+      ctx.translate(x, top + 14); ctx.scale(1 + o.squash * .25, 1 - o.squash * .35);
+      ctx.fillStyle = tint('#ff5c7a', s); ctx.beginPath(); ctx.ellipse(0, 0, o.w / 2, 14, 0, Math.PI, 0); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(-9, -6, 3, 0, TAU); ctx.arc(6, -9, 2.5, 0, TAU); ctx.arc(12, -3, 2, 0, TAU); ctx.fill();
+    } else if (o.type === 'cloud') {
+      ctx.fillStyle = 'rgba(255,255,255,.88)'; ctx.beginPath();
+      ctx.ellipse(x, top + 7, o.w / 2, 9, 0, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(x - o.w * .2, top + 3, 11, 0, TAU); ctx.arc(x + o.w * .15, top + 1, 14, 0, TAU); ctx.fill();
+    } else if (o.type === 'thorns') {
+      const n = Math.max(2, Math.round(o.w / 10)), sw = o.w / n, base = top + o.h;
+      ctx.fillStyle = tint('#5a2a4a', s); ctx.beginPath(); ctx.moveTo(l, base + 4);
+      for (let i = 0; i < n; i++) { ctx.lineTo(l + i * sw + sw / 2, top); ctx.lineTo(l + (i + 1) * sw, base); }
+      ctx.lineTo(l + o.w, base + 4); ctx.closePath(); ctx.fill();
+    } else if (o.type === 'crystal') {
+      const cy = top + o.h / 2;
+      ctx.fillStyle = o.flash > 0 ? '#ffffff' : COLORS[o.c];
+      ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x + o.w / 2, cy); ctx.lineTo(x, top + o.h); ctx.lineTo(x - o.w / 2, cy); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.moveTo(x, top + 4); ctx.lineTo(x + 5, cy); ctx.lineTo(x, cy + 4); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(20,16,28,.7)'; ctx.lineWidth = 1.5; ctx.beginPath();
+      if (o.hp < 3) { ctx.moveTo(x - 6, cy - 6); ctx.lineTo(x + 2, cy + 2); ctx.lineTo(x - 1, cy + 9); }
+      if (o.hp < 2) { ctx.moveTo(x + 7, cy - 4); ctx.lineTo(x + 1, cy - 1); }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
 function drawPlayer() {
   if (G.dead > 0 || G.state === 'over') return;
   const { ctx } = view, P = G.P;
   if (P.inv > 0 && Math.floor(G.t * 12) % 2) return;
-  const x = sx(P.x), y = P.y, r = P.r, gy = groundAt(P.x) ?? view.H + 40;
+  const x = sx(P.x), y = P.y, r = P.r, gy = surfaceBelow(P.x, P.y + P.r)?.y ?? view.H + 40;
   const k = clamp(1 - (gy - y) / 320, .2, 1);
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, gy + 1, r * k, 4 * k, 0, 0, TAU); ctx.fill();
   ctx.save(); ctx.translate(x, y);
@@ -145,6 +187,7 @@ export function render() {
   ctx.save();
   if (G.shake > 0) ctx.translate(rnd(-G.shake, G.shake), rnd(-G.shake, G.shake));
   drawWorld();
+  drawObjects();
   drawPickups();
   for (const e of G.enemies) drawEnemy(e);
   ctx.fillStyle = '#fff6c2';

@@ -19,7 +19,7 @@ export function defaultGround(n = 240) {
 }
 
 export function loadTerrain(level) {
-  pts = level.ground || defaultGround();
+  pts = Array.isArray(level.ground) ? level.ground : defaultGround();
   step = L / pts.length;
   const all = (level.objects || []).map(o => ({ ...SHAPES[o.type], ...o, flash: 0, squash: 0, gone: false }));
   holes = all.filter(o => o.type === 'hole');

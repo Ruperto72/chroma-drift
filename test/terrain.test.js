@@ -131,3 +131,15 @@ describe('objects', () => {
     expect(surfaceBelow(1400, 390)).toMatchObject({ y: 400, kind: 'cloud' });
   });
 });
+
+describe('real level data', () => {
+  it('ignores a non-array ground field (palette colour) and uses the default ground', async () => {
+    const { LEVELS } = await import('../src/levels.js');
+    view.H = 540;
+    loadTerrain(LEVELS[0]);
+    for (const o of objects()) expect(Number.isFinite(surfaceBelow(o.x, 0).y)).toBe(true);
+    const b = { x: 0, y: 200, vx: 0, r: 18 };
+    expect(collideCircle(b)).toBeNull();
+    expect(b.x).toBe(0);
+  });
+});

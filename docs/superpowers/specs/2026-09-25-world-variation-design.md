@@ -73,13 +73,13 @@ Skalvariablerna `W`, `H`, `S` och `ctx` hålls i `view` i `state.js` så att fys
 
 ### Mark som data
 
-Marken beskrivs med kontrollpunkter: en höjd (över skärmens botten) per 100 världsenheter, dvs. 48 punkter för L = 4800. Mellan punkter används cosinusinterpolation. Interpolationen loopar (punkt 47 → punkt 0).
+Marken beskrivs med kontrollpunkter: höjd över skärmens botten, jämnt fördelade med avståndet L / antal punkter. Handgjorda banor använder 48 punkter (en per 100 enheter). Mellan punkter används cosinusinterpolation som loopar (sista punkten → första). Alla vertikala värden i banfiler (`ground`, objektens `y`) är höjd över skärmens botten.
 
 ```js
 ground: [120, 130, 150, 140, 90, 90, 90, 160, /* … 48 st */]
 ```
 
-Tills delprojekt 2 är klart genereras en `ground`-array ur dagens sinusformel så att The Meadows ser ut som nu.
+Saknar en värld `ground` (eller är det inte en array) genereras 240 punkter ur dagens sinusformel (avvikelse < 1,5 enhet), så att världarna ser ut som nu tills delprojekt 2. Notera: i dagens `LEVELS` är `ground` en färg – den flyttas till `palette.ground` i delprojekt 2.
 
 ### Objekt
 
