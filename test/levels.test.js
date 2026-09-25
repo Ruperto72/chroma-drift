@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { LEVELS } from '../src/levels/index.js';
 import { L } from '../src/config.js';
+import { view } from '../src/state.js';
+import { loadTerrain, heightAt } from '../src/terrain.js';
 
 const REQUIRED = { rock: ['w', 'h'], pillar: ['h'], mushroom: [], cloud: ['y', 'w'], thorns: ['w'], crystal: ['c'], hole: ['w'] };
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -37,6 +39,17 @@ describe.each(LEVELS.map(l => [l.name, l]))('%s', (_, lv) => {
   it('places no object over a hole', () => {
     const holes = lv.objects.filter(o => o.type === 'hole');
     for (const o of lv.objects) if (o.type !== 'hole') for (const h of holes) expect(Math.abs(o.x - h.x)).toBeGreaterThanOrEqual((h.w + (o.w || 0)) / 2);
+  });
+  it('gives every water pool banks at or above its surface', () => {
+    view.H = 540; loadTerrain(lv);
+    for (const z of lv.zones.filter(z => z.type === 'water')) {
+      const surface = heightAt(z.x) + 30;
+      expect(heightAt(z.x - z.w / 2)).toBeGreaterThanOrEqual(surface);
+      expect(heightAt(z.x + z.w / 2)).toBeGreaterThanOrEqual(surface);
+    }
+  });
+  it('keeps objects out of lava and water', () => {
+    for (const z of lv.zones.filter(z => z.type !== 'ice')) for (const o of lv.objects) expect(Math.abs(o.x - z.x)).toBeGreaterThanOrEqual((z.w + (o.w || 0)) / 2);
   });
   it('uses a known decor and known rules', () => {
     expect(['meadow', 'dusk', 'icicles', 'embers']).toContain(lv.decor);

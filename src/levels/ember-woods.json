@@ -6,14 +6,14 @@
   "objects": [
     { "type": "rock", "x": 1400, "w": 60, "h": 50 },
     { "type": "thorns", "x": 1700, "w": 60 },
-    { "type": "pillar", "x": 2700, "h": 130 },
+    { "type": "pillar", "x": 2700, "h": 120 },
     { "type": "thorns", "x": 3300, "w": 70 },
     { "type": "rock", "x": 4200, "w": 70, "h": 40 }
   ],
   "zones": [
-    { "type": "lava", "x": 850, "w": 160 },
-    { "type": "lava", "x": 2250, "w": 160 },
-    { "type": "lava", "x": 3750, "w": 160 }
+    { "type": "lava", "x": 850, "w": 60 },
+    { "type": "lava", "x": 2250, "w": 60 },
+    { "type": "lava", "x": 3750, "w": 60 }
   ],
   "rules": { "embers": { "rate": 0.6 } },
   "decor": "embers"

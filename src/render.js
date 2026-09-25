@@ -1,6 +1,6 @@
 import { TAU, L, TOP, HUDF, COLORS } from './config.js';
 import { G, view } from './state.js';
-import { mod, clamp, rnd, tint, hash, rrect } from './util.js';
+import { mod, wd, clamp, rnd, tint, hash, rrect } from './util.js';
 import { groundAt, surfaceBelow, objects, objBox } from './terrain.js';
 import { curLevel } from './game.js';
 import { allZones, waterSurface } from './zones.js';
@@ -127,11 +127,16 @@ function drawObjects() {
   }
 }
 
+export function zoneSpan(z) {
+  const x0 = wd(z.x - (G.camX + view.W / 2)) + view.W / 2 - z.w / 2;
+  return [x0, x0 + z.w];
+}
+
 function drawZones(pass) {
   const { ctx, W, H } = view, camX = G.camX;
   const gAt = x => groundAt(camX + x) ?? H + 40;
   for (const z of allZones()) {
-    const x0 = sx(z.x - z.w / 2), x1 = x0 + z.w;
+    const [x0, x1] = zoneSpan(z);
     if (x1 < -40 || x0 > W + 40) continue;
     if (pass === 'ground' && z.type === 'ice') {
       ctx.strokeStyle = tint('#e6f8ff', G.sat, .95); ctx.lineWidth = 7; ctx.beginPath();
