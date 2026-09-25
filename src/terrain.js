@@ -2,7 +2,7 @@ import { L, TAU, TOP } from './config.js';
 import { view } from './state.js';
 import { mod, wd, clamp } from './util.js';
 
-const SHAPES = {
+export const SHAPES = {
   rock:     { solid: true },
   pillar:   { solid: true, w: 28, stopsShots: true },
   crystal:  { solid: true, w: 26, h: 36, stopsShots: true, hp: 3 },
@@ -10,7 +10,7 @@ const SHAPES = {
   cloud:    { h: 14 },
   thorns:   { h: 14, hazard: true },
   bush:     { w: 50, h: 34 },
-  cliff:    { solid: true, w: 40, h: 300, stopsShots: true },
+  cliff:    { solid: true, w: 40, h: 260, stopsShots: true },
   hole:     {},
 };
 
@@ -48,6 +48,18 @@ export const holes = () => T.holes;
 export function holeAt(x) { return T.holes.find(h => Math.abs(wd(x - h.x)) < h.w / 2) || null; }
 export function openHole(x, w, cave) { T.holes.push({ type: 'hole', x, w, cave }); }
 export function closeHole(cave) { T.holes = T.holes.filter(h => h.cave !== cave); }
+
+export function confineToHole(b) {
+  for (const h of T.holes) {
+    const dx = wd(b.x - h.x), hw = h.w / 2;
+    if (Math.abs(dx) >= hw + b.r) continue;
+    const rim = view.H - Math.min(heightAt(h.x - hw), heightAt(h.x + hw));
+    if (b.y + b.r <= rim + 2) continue; // still above the rim: free to roll out
+    const lim = hw - b.r;
+    if (dx > lim) { b.x -= dx - lim; if (b.vx > 0) b.vx = -b.vx * .6; }
+    else if (dx < -lim) { b.x -= dx + lim; if (b.vx < 0) b.vx = -b.vx * .6; }
+  }
+}
 
 export function groundAt(x) { return holeAt(x) ? null : view.H - heightAt(x); }
 

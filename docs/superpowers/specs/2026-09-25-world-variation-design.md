@@ -204,7 +204,7 @@ Efter fyra världar börjar varvet om med `need + 2` per varv, som i dag.
 - `loot`: fasta positioner för pärlor, poäng-kristaller och ev. `extraLife`.
 - Samma objekttyper som på ytan kan användas.
 - `loot`-typer: `gem` (grön pärla, flyttar kraftmarkören), `star` (+200 poäng), `life` (extraliv, högst ett per värld). `foes`: `[{ x, y }]` – färglösa svävande fiender i mörkergrottor.
-- Ingångsmått: hål bredd 70; buske 50×34 (ej solid, 1 träff); sten 64×46 (3 träffar); klippa 40×300 (solid, öppning ±26 kring `entrance.y`). Ingångar ligger minst 300 enheter från x = 0.
+- Ingångsmått: hål bredd 70; buske 50×34 (ej solid, 1 träff); sten 64×46 (3 träffar); klippa 40×260 (solid; toppen ligger minst 2r + 10 under taket vid H = 540 så att Antigrav kan flyga över, öppning ±26 kring `entrance.y`). Ingångar ligger minst 300 enheter från x = 0.
 
 ### Ingångar
 
@@ -213,7 +213,7 @@ Efter fyra världar börjar varvet om med `need + 2` per varv, som i dag.
 | `hole` | Ja | Hål i marken. Den som faller ner hamnar i grottan (aldrig död). |
 | `bush` | Nej | Ser ut som dekor. Ett skott tar bort busken → blir ett `hole`. |
 | `rock` | Nej | Sten med spricka, hp 3. Vid hp 0 → blir ett `hole`. |
-| `cliff` | Nej | Mörk öppning i en `pillar`/klippvägg på höjd `y`. Man tar sig in genom att flyga in i den (i praktiken bara med Antigrav). |
+| `cliff` | Nej | Mörk öppning i en `pillar`/klippvägg på höjd `y`. Man tar sig in genom att flyga in i den (kräver Antigrav eller ett Thrust+upp-studs). |
 
 ### Grottyper
 

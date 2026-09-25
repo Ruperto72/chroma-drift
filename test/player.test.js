@@ -125,4 +125,12 @@ describe('updatePlayer with objects', () => {
     expect(G.P.x).toBe(1200 - 18);
     expect(G.P.vx).toBeLessThan(0);
   });
+  it('stays inside a hole it has sunk into instead of popping back up', () => {
+    setup([{ type: 'hole', x: 1000, w: 70 }], { x: 1034, y: 450, vx: 200, vy: 100 });
+    const y0 = G.P.y;
+    updatePlayer(1 / 60);
+    expect(G.P.y).toBeGreaterThan(y0);
+    expect(G.P.x).toBeLessThanOrEqual(1000 + 35 - 18);
+    expect(G.P.vx).toBeLessThan(0);
+  });
 });

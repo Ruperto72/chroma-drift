@@ -1,7 +1,7 @@
 import { TOP } from './config.js';
 import { G } from './state.js';
 import { clamp, lerp, rnd } from './util.js';
-import { surfaceBelow, collideCircle, touchesHazard, hazardBelow, ceilingAt, caveWidth } from './terrain.js';
+import { surfaceBelow, collideCircle, touchesHazard, hazardBelow, ceilingAt, caveWidth, confineToHole } from './terrain.js';
 import { tryCliff } from './caves.js';
 import { sfx } from './audio.js';
 import { burst } from './fx.js';
@@ -51,6 +51,7 @@ export function updatePlayer(dt) {
   P.x += P.vx * dt; P.y += P.vy * dt;
   const hit = collideCircle(P, prevBottom);
   if (hit?.type === 'cliff') { tryCliff(hit); if (G.scene === 'cave') return; }
+  confineToHole(P);
   const s = surfaceBelow(P.x, prevBottom);
   if (s && P.y + P.r > s.y) {
     P.y = s.y - P.r;

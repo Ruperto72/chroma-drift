@@ -73,3 +73,21 @@ describe('caves in spin mode', () => {
     expect(crossCave(c, 30)).toBe('passed');
   });
 });
+
+describe('cliff', () => {
+  it('the Dusk Valley cliff can be flown over with Antigrav on a 16:9 screen', () => {
+    const e = dusk.caves.find(c => c.entrance.kind === 'cliff').entrance;
+    const lv = { ...dusk, objects: [...dusk.objects, { type: 'cliff', x: e.x, opening: e.y }] };
+    for (const [from, to] of [[e.x - 200, e.x + 200], [e.x + 200, e.x - 200]]) {
+      const dir = Math.sign(to - from);
+      view.H = 540; loadTerrain(lv); loadZones(lv); loadRules({});
+      Object.assign(G, { state: 'play', scene: 'surface', dead: 0, shield: 0, lives: 3, t: 0, parts: [], own: { thrust: true, anti: true, rapid: false, double: false, sat: false } });
+      G.P = { x: from, y: groundAt(from) - 60, vx: 0, vy: 0, r: 18, spin: 0, ang: 0, face: dir, inv: 0 };
+      keys.ArrowUp = true; keys.ArrowRight = dir > 0; keys.ArrowLeft = dir < 0;
+      let passed = false;
+      for (let i = 0; i < 6 * 60 && !passed; i++) { updatePlayer(1 / 60); passed = dir > 0 ? G.P.x > to : G.P.x < to; }
+      keys.ArrowUp = false;
+      expect(passed).toBe(true);
+    }
+  });
+});

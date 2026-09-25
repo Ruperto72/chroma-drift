@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { LEVELS } from '../src/levels/index.js';
 import { L } from '../src/config.js';
 import { view } from '../src/state.js';
-import { loadTerrain, heightAt, ceilingAt } from '../src/terrain.js';
+import { loadTerrain, heightAt, ceilingAt, SHAPES } from '../src/terrain.js';
 
 const REQUIRED = { rock: ['w', 'h'], pillar: ['h'], mushroom: [], cloud: ['y', 'w'], thorns: ['w'], crystal: ['c'], hole: ['w'] };
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -68,7 +68,8 @@ describe.each(LEVELS.map(l => [l.name, l]))('%s', (_, lv) => {
       expect(c.entrance.x).toBeLessThan(L - 300);
       if (c.entrance.kind === 'cliff') {
         expect(c.entrance.y).toBeGreaterThanOrEqual(heightAt(c.entrance.x) + 60);
-        expect(c.entrance.y).toBeLessThanOrEqual(heightAt(c.entrance.x) + 260);
+        expect(c.entrance.y).toBeLessThanOrEqual(heightAt(c.entrance.x) + SHAPES.cliff.h - 40);
+        expect(heightAt(c.entrance.x) + SHAPES.cliff.h).toBeLessThanOrEqual(540 - 72 - 2 * 18 - 10);
       }
     }
   });
