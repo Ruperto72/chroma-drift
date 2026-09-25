@@ -41,7 +41,9 @@ chroma-drift/
 │  ├─ config.js        L, TOP, HUDF, COLORS, SLOTS
 │  ├─ levels.js        LEVELS (ersätts av src/levels/*.json i delprojekt 2)
 │  ├─ util.js          mod, wd, clamp, lerp, rnd, tint, hash
-│  ├─ state.js         exporterar det gemensamma objektet `game`
+│  ├─ state.js         exporterar gemensamma objekten `G` och `view`
+│  ├─ game.js          spelflöde: newGame, startLevel, levelClear, gameOver, update
+│  ├─ fx.js            banner, addText, burst
 │  ├─ terrain.js       groundY (i dag), terrängmodell (delprojekt 1)
 │  ├─ audio.js         AudioContext, SFX, sfx()
 │  ├─ input.js         tangentbord, touch-joystick, knappar
@@ -55,9 +57,9 @@ chroma-drift/
 
 ### Tillstånd
 
-Dagens closure-variabler (`G`, `P`, `spark`, `own`, `enemies`, `bullets`, `ebullets`, `drops`, `gems`, `parts`, `texts`, `camX`, `shake`, `paused`) samlas i ett exporterat objekt `game` i `state.js`. Moduler importerar `game` och läser/skriver dess fält. Logiken flyttas men skrivs inte om.
+Dagens closure-variabler (`G`, `P`, `spark`, `own`, `enemies`, `bullets`, `ebullets`, `drops`, `gems`, `parts`, `texts`, `camX`, `shake`, `paused`) samlas i ett exporterat objekt `G` i `state.js`. Moduler importerar `G` och läser/skriver dess fält. Logiken flyttas men skrivs inte om.
 
-Skalvariablerna `W`, `H`, `S` och `ctx` hålls i en liten `view`-export (från `render.js` eller `state.js`) så att fysikkod som använder `H` (t.ex. `groundY`) kan läsa dem.
+Skalvariablerna `W`, `H`, `S` och `ctx` hålls i `view` i `state.js` så att fysikkod som använder `H` (t.ex. `groundY`) kan läsa dem.
 
 ### Krav
 
@@ -116,7 +118,7 @@ objects: [
 
 ### Rendering
 
-Objekten ritas i `render.js` efter marken, färgade med `tint(..., game.sat)` så att de följer färgläggningen.
+Objekten ritas i `render.js` efter marken, färgade med `tint(..., G.sat)` så att de följer färgläggningen.
 
 ### Tester
 
@@ -185,7 +187,7 @@ Efter fyra världar börjar varvet om med `need + 2` per varv, som i dag.
 
 ### Scener
 
-`game.scene` är `'surface'` eller `'cave'`. Vid inträde i grotta sparas ytans tillstånd (fiender, skott, droppar, pärlor, spelarposition, kamera, spawn-timer) i `game.surfaceSnapshot` och grottans terräng laddas med `loadTerrain`. Vid utträde återställs ytan från snapshoten.
+`G.scene` är `'surface'` eller `'cave'`. Vid inträde i grotta sparas ytans tillstånd (fiender, skott, droppar, pärlor, spelarposition, kamera, spawn-timer) i `G.surfaceSnapshot` och grottans terräng laddas med `loadTerrain`. Vid utträde återställs ytan från snapshoten.
 
 ### Grottdata
 
@@ -218,11 +220,11 @@ Efter fyra världar börjar varvet om med `need + 2` per varv, som i dag.
 
 ### Utgång
 
-En ljusstråle i grottans högra ände. Kontakt → tillbaka till ytan vid ingångens x, ovanför marken, med `inv = 2`. Grottan markeras förbrukad i `game.cavesUsed` och ingången rasar igen (hålet blir mark, `bush`/`rock` återkommer inte) för resten av världen.
+En ljusstråle i grottans högra ände. Kontakt → tillbaka till ytan vid ingångens x, ovanför marken, med `inv = 2`. Grottan markeras förbrukad i `G.cavesUsed` och ingången rasar igen (hålet blir mark, `bush`/`rock` återkommer inte) för resten av världen.
 
 ### Hemligheter
 
-`game.secretsFound` räknar besökta dolda grottor per värld. Vid `levelClear` visas t.ex. "Secrets found: 2/3" (räknar alla grottor i världen). Räknas per spelomgång, sparas inte.
+`G.secretsFound` räknar besökta dolda grottor per värld. Vid `levelClear` visas t.ex. "Secrets found: 2/3" (räknar alla grottor i världen). Räknas per spelomgång, sparas inte.
 
 ### Tester
 
